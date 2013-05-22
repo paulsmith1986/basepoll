@@ -1,0 +1,100 @@
+#ifndef FIRST_NET_LIBRARY_HEAD
+#define FIRST_NET_LIBRARY_HEAD
+#include <sstream>
+#include <sys/socket.h>								//scoket类
+#include <sys/epoll.h>								//处理大并发连接的epoll
+#include <arpa/inet.h>
+#include <sys/eventfd.h>
+#include <sys/timerfd.h>
+#include <sys/signalfd.h>
+#include <fcntl.h>
+#include <ctype.h>									//匹配类型
+#include <signal.h>									//捕捉信号用的
+#include <errno.h>
+#include <netinet/tcp.h>							//TCP_NODELAY
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <time.h>
+#include <sstream>
+#include <iostream>
+#include <assert.h>
+#include <cstring>
+#include "struct_pool.h"
+#include "first_poll.h"
+#include "poll.h"
+#include "first_stream.h"
+#include "first_protocol.h"
+using namespace std;
+
+//调试开关
+#define FIRST_NET_DEBUG_SWITCH
+
+//版本号
+#define	FIRST_NET_VERSION			"{$first_poll_version}"
+
+
+#define FIRST_SEND_CACHE			64 * 1024			//发送区缓存
+#define BIG_PACKET					32 * 1024			//大数据包
+#define SMALL_PACKET				1024				//用户数据包初始长度
+#define MAX_EVENTS					512					//最大未决处理量，backlog指定了套接字可以有多少个未决的连接
+#define READ_EVENT	EPOLLIN|EPOLLRDHUP					//读事件
+#define WRITE_EVENT EPOLLOUT|EPOLLRDHUP					//写事件
+
+extern int FIRST_EPOLL_FD;								//主epoll ID
+extern FirstStream *NET_RUN_ERROR;
+#define OUT_ERROR *NET_RUN_ERROR
+#ifdef FIRST_NET_DEBUG
+	#define NET_OUT_LOG *NET_RUN_LOG
+	extern FirstStream *NET_RUN_LOG;
+#endif
+
+enum fdState {
+	FD_STATE_IDLE,			//空闲状态
+	FD_STATE_CLOSE			//关闭状态
+};
+
+enum fdType {
+	FD_TYPE_LISTEN,			//主监听fd
+	FD_TYPE_SOCKET,			//socket连接
+	FD_TYPE_EVENT,			//事件fd
+	FD_TYPE_TIMER,			//时间fd
+	FD_TYPE_SIGNAL			//信号fd
+};
+
+//每一个连接的详细信息
+struct fd_struct_t{
+	int						fd;								//连接ID
+	int						un_send_len;					//未发出消息长度(写)
+	char*					un_send;						//未发出消息内容
+	protocol_packet_t*		un_read_pack;					//未处理完的数据包
+	void*					ext_data;						//扩展数据
+	fdState					status;							//连接状态
+	fdType					fd_type;						//连接类型
+};
+
+//设置为非阻塞状态函数
+bool set_non_block( const int sock );
+
+//开始网络进程
+int start_net_service( char *bind_ip, int sock_port );
+
+/**
+ * 创建协议数据包
+ */
+protocol_packet_t *new_proto_packet( uint32_t data_len );
+
+/**
+ * 删除协议数据包
+ */
+void delete_protocol_packet( protocol_packet_t *tmp_pack );
+
+//设置倒计时
+void set_timeout( int timer_fd, int ms );
+
+//守护进程
+int daemonize();
+
+//唤醒
+void wakeup( int fd );
+#endif
