@@ -16,7 +16,7 @@ void FirstPoller::poll( int interval )
 				{
 					if ( events_[ i ].events & EPOLLRDHUP )
 					{
-						#ifdef YILE_NET_DEBUG
+						#ifdef FIRST_NET_DEBUG
 						NET_OUT_LOG << "Fd:" << fd_struct->fd << " has hang up!\n" << fin;
 						#endif
 						close_fd( fd_struct );
@@ -31,7 +31,7 @@ void FirstPoller::poll( int interval )
 					//响应OUT事件
 					if ( events_[ i ].events & EPOLLOUT )
 					{
-						#ifdef YILE_NET_DEBUG
+						#ifdef FIRST_NET_DEBUG
 						NET_OUT_LOG << "Fd " << fd_struct->fd << " write buffer can send." << fin;
 						#endif
 						fd_write_handle( fd_struct );
@@ -49,7 +49,7 @@ void FirstPoller::poll( int interval )
 				break;
 				default:	//出错了
 					OUT_ERROR << "Cache fd_type:" << fd_struct->fd_type << fin;
-					#ifdef YILE_NET_DEBUG
+					#ifdef FIRST_NET_DEBUG
 					abort();
 					#endif
 				break;
@@ -104,7 +104,7 @@ void FirstPoller::new_connection( fd_struct_t *fd_info )
 	}
 	else
 	{
-		#ifdef YILE_NET_DEBUG
+		#ifdef FIRST_NET_DEBUG
 		NET_OUT_LOG << "New connection:" << connfd << fin;
 		#endif
 		//设置为非阻塞
@@ -129,6 +129,7 @@ fd_struct_t* FirstPoller::create_fd_struct( int fd, fdType fd_type )
 	tmp_info->un_read_pack = NULL;
 	tmp_info->un_send = NULL;
 	tmp_info->ext_data = NULL;
+	tmp_info->poller = this;
 	set_fd_status( tmp_info, FD_STATE_IDLE );
 	fd_list_[ fd ] = tmp_info;
 	return tmp_info;
@@ -186,7 +187,7 @@ void FirstPoller::send_data( fd_struct_t *fd_info, void *send_re, uint32_t total
 		{
 			if ( errno != EAGAIN )
 			{
-				#ifdef YILE_NET_DEBUG
+				#ifdef FIRST_NET_DEBUG
 				NET_OUT_LOG << "发送消息出错 errno:" << errno << fin;
 				#endif
 				return;
@@ -199,7 +200,7 @@ void FirstPoller::send_data( fd_struct_t *fd_info, void *send_re, uint32_t total
 			char *un_send_char = (char *)malloc( fd_info->un_send_len );
 			memcpy( un_send_char, (char*)send_re + send_num, fd_info->un_send_len );
 			fd_info->un_send = un_send_char;
-			#ifdef YILE_NET_DEBUG
+			#ifdef FIRST_NET_DEBUG
 			NET_OUT_LOG << "fd:" << fd_info->fd << " 有消息没有发送完 注册OUT事件" << fin;
 			#endif
 			//注册OUT事件
@@ -234,7 +235,7 @@ void FirstPoller::fd_write_handle( fd_struct_t *fd_info )
 	{
 		if ( errno != EAGAIN )
 		{
-			#ifdef YILE_NET_DEBUG
+			#ifdef FIRST_NET_DEBUG
 			NET_OUT_LOG << "OUT事件里发送消息出错" << fin;
 			#endif
 			close_fd( fd_info );
@@ -250,7 +251,7 @@ void FirstPoller::fd_write_handle( fd_struct_t *fd_info )
 		free( fd_info->un_send );
 		fd_info->un_send = un_send_char;
 		fd_info->un_send_len = new_un_len;
-		#ifdef YILE_NET_DEBUG
+		#ifdef FIRST_NET_DEBUG
 		NET_OUT_LOG << "fd:" << fd_info->fd << " 在OUT事件里还没把消息发完" << fin;
 		#endif
 	}
@@ -260,7 +261,7 @@ void FirstPoller::fd_write_handle( fd_struct_t *fd_info )
 		free( fd_info->un_send );
 		fd_info->un_send = NULL;
 		update_fd_event( fd_info, EPOLL_CTL_MOD, READ_EVENT );
-		#ifdef YILE_NET_DEBUG
+		#ifdef FIRST_NET_DEBUG
 		NET_OUT_LOG << "fd:" << fd_info->fd << " 在OUT事件里把数据发送完毕，重新监听IN事件" << fin;
 		#endif
 	}
@@ -328,15 +329,12 @@ void FirstPoller::read_socket_data( fd_struct_t *fd_info )
 	while ( true )
 	{
 		int ret = read( fd, read_packet->data + read_packet->pos, need_read );
-		#ifdef YILE_NET_DEBUG
-		NET_OUT_LOG << "fd:" << fd << " need_read:" << need_read << " read ret=" << ret << fin;
-		#endif
 		if ( 0 == ret )
 		{
 			//收到响应事件，没有数据可读
 			if ( 0 == total_read_bytes )
 			{
-				#ifdef YILE_NET_DEBUG
+				#ifdef FIRST_NET_DEBUG
 				NET_OUT_LOG << "连接 " << fd << " 断开（无可读数据）" << fin;
 				#endif
 				close_fd( fd_info );
@@ -370,14 +368,14 @@ void FirstPoller::read_socket_data( fd_struct_t *fd_info )
 			}
 			else if ( errno == EINTR )
 			{
-				#ifdef YILE_NET_DEBUG
+				#ifdef FIRST_NET_DEBUG
 				NET_OUT_LOG << "go on read\n" << fin;
 				#endif
 				continue;
 			}
 			else		//不知道什么错误
 			{
-				#ifdef YILE_NET_DEBUG
+				#ifdef FIRST_NET_DEBUG
 				NET_OUT_LOG << "Unkonwn error, errno:" << errno << fin;
 				#endif
 				break;
@@ -386,9 +384,6 @@ void FirstPoller::read_socket_data( fd_struct_t *fd_info )
 		else
 		{
 			read_packet->pos += ret;
-			#ifdef YILE_NET_DEBUG
-			NET_OUT_LOG << "fd:" << fd << " need_read:" << need_read << " ret:" << ret << fin;
-			#endif
 			total_read_bytes += ret;
 			//刚好读完指定需要的数据长度
 			if ( ret == (int)need_read )
@@ -403,7 +398,7 @@ void FirstPoller::read_socket_data( fd_struct_t *fd_info )
 					if ( read_packet->pool_size < new_size )
 					{
 						//超过最大支持的数据包
-						if ( new_size > MAX_READ_PACK_SIZE )
+						if ( new_size > MAX_READ_PROTOCOL )
 						{
 							close_fd( fd_info );
 							return;
@@ -448,7 +443,7 @@ void FirstPoller::read_socket_data( fd_struct_t *fd_info )
 //关闭连接
 void FirstPoller::close_fd( fd_struct_t *fd_info )
 {
-	#ifdef YILE_NET_DEBUG
+	#ifdef FIRST_NET_DEBUG
 	NET_OUT_LOG << "Close fd:" << fd_info->fd << fin;
 	#endif
 	set_fd_status( fd_info, FD_STATE_CLOSE );

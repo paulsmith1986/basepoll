@@ -2,7 +2,7 @@
 /**
  * 连接服务器
  */
-int first_net_connect( char* host, int port )
+int first_net_connect( const char* host, int port )
 {
 	int socket_fd = socket( AF_INET, SOCK_STREAM, 0 );
 	struct sockaddr_in	sin;

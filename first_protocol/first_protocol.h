@@ -6,8 +6,8 @@
 #include <string.h>
 
 #define MAX_LIST_RECURSION			128					//最多printf缩进
-#define MAX_READ_PACK_SIZE			1024 * 128			//最大支持的数据包大小
-
+#define MAX_READ_PACK_SIZE			1024 * 64			//最大支持的数据包大小
+#define PROTOCOL_DATA_LEN			1024 * 16			//原始包大小
 #define PROTO_ERROR_OVERFLOW		1					//结果溢出
 #define PROTO_ERROR_SIZEERROR		2					//包大小出错
 #define PROTO_ERROR_TOOBIG_DATA		3					//包数据太大
@@ -16,6 +16,8 @@
 #define PROTO_READ_PACK_ID_ERROR	6					//读到的数据包id不是想要的数据包id
 
 #define MOD_ADLER					65521				//用于adler32校验
+
+typedef struct fd_struct_t fd_struct_t;
 
 //协议传输字符串的长度定义
 typedef	uint16_t string_len_t;

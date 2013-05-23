@@ -16,7 +16,7 @@
 /**
  * 连接服务器
  */
-int first_net_connect( char* host, int port );
+int first_net_connect( const char* host, int port );
 
 /**
  * 发送数据包( 注意：数据发送完后，如果传入包有过重新申请内存，数据会被释放 )

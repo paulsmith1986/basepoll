@@ -46,10 +46,12 @@ void first_result_push_data( protocol_result_t *result, void *data, int len )
 //往结果集写数字串
 void write_UTF( protocol_result_t *re_pack, char *re_str )
 {
-	string_len_t str_len = strlen( re_str ) + 1;
+	string_len_t str_len = strlen( re_str );
 	first_result_push_data( re_pack, &str_len, sizeof( string_len_t ) );
-	first_result_push_data( re_pack, re_str, str_len );
-	re_pack->str[ re_pack->pos - 1 ] = '\0';
+	if ( str_len > 0 )
+	{
+		first_result_push_data( re_pack, re_str, str_len );
+	}
 }
 
 /**
@@ -91,8 +93,12 @@ char *read_UTF( protocol_packet_t *re_pack, protocol_result_t *data_pool )
 	string_len_t str_len;
 	result_copy( re_pack, &str_len, sizeof( string_len_t ), data_pool );
 	char *re_char = &data_pool->str[ data_pool->pos ];
-	result_copy( re_pack, &data_pool->str[ data_pool->pos ], str_len, data_pool );
-	add_data_pool_size( re_pack, data_pool, str_len );
+	if ( str_len > 0 )
+	{
+		result_copy( re_pack, &data_pool->str[ data_pool->pos ], str_len, data_pool );
+	}
+	re_char[ str_len ] = '\0';
+	add_data_pool_size( re_pack, data_pool, str_len + 1 );
 	return re_char;
 }
 

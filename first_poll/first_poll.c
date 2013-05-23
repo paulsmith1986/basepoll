@@ -1,5 +1,6 @@
 #include "first_poll.h"
 #include "poller.h"
+#include "poll_base.h"
 #include "poll_handler.h"
 
 int daemonize()
@@ -37,15 +38,12 @@ int daemonize()
 }
 
 //开始网络进程
-int start_net_service( char *bind_ip, int sock_port )
+int start_net_service( const char *bind_ip, int sock_port )
 {
 	int MAIN_SOCKET_FD = 0;
 	if ( ( MAIN_SOCKET_FD = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0)
 	{
 		OUT_ERROR << "Socket create Error" << fin;
-		#ifdef YILE_NET_DEBUG
-		NET_OUT_LOG << "Socket create Error" << fin;
-		#endif
 		return -1;
 	}
 	//设置SO_REUSEADDR选项(服务器快速重起)
@@ -109,27 +107,14 @@ bool set_non_block( const int sock )
  */
 protocol_packet_t *new_proto_packet( uint32_t data_len )
 {
+	//最大支持的数据包
+	if ( data_len > MAX_READ_PROTOCOL )
+	{
+		return NULL;
+	}
 	protocol_packet_t *tmp_pack = ( protocol_packet_t* )malloc( sizeof( protocol_packet_t ) );
-	if ( data_len <= SMALL_PACKET )
-	{
-		tmp_pack->pool_size = SMALL_PACKET;
-		tmp_pack->data = ( char* )malloc( SMALL_PACKET );
-	}
-	else if ( data_len <= BIG_PACKET )
-	{
-		tmp_pack->pool_size = BIG_PACKET;
-		tmp_pack->data = ( char* )malloc( BIG_PACKET );
-	}
-	else
-	{
-		//最大支持的数据包
-		if ( data_len > MAX_READ_PACK_SIZE )
-		{
-			return NULL;
-		}
-		tmp_pack->pool_size = data_len;
-		tmp_pack->data = ( char* )malloc( data_len );
-	}
+	tmp_pack->pool_size = data_len;
+	tmp_pack->data = ( char* )malloc( data_len );
 	tmp_pack->pos = 0;
 	tmp_pack->is_resize = 0;
 	return tmp_pack;
@@ -140,18 +125,8 @@ protocol_packet_t *new_proto_packet( uint32_t data_len )
  */
 void delete_protocol_packet( protocol_packet_t *tmp_pack )
 {
-	//大型数据包 或者 重新分配过内存的包 释放掉内存
-	if ( tmp_pack->is_resize || tmp_pack->pool_size > MAX_READ_PACK_SIZE )
-	{
-		free( tmp_pack->data );
-		free( tmp_pack->data );
-	}
-	else
-	{
-		//todo 数据池
-		free( tmp_pack->data );
-		free( tmp_pack->data );
-	}
+	free( tmp_pack->data );
+	free( tmp_pack->data );
 }
 
 //唤醒

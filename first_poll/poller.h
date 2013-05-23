@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <vector>
 #include <map>
-#include "first_poll.h"
 #include "poll_handler.h"
 #include "struct_pool.h"
 class FirstPoller

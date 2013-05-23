@@ -1,7 +1,7 @@
 #include "first_stream.h"
 
 #pragma GCC diagnostic ignored "-Wtype-limits"
-namespace yilelog{
+namespace firstlog{
 const char digits[] = "9876543210123456789";
 const char* zero = digits + 9;
 const char digitsHex[] = "0123456789ABCDEF";
@@ -16,7 +16,7 @@ size_t convert( char buf[], T value )
 	do{
 		int lsd = static_cast<int>( i % 10 );
 		i /= 10;
-		*p++ = yilelog::zero[ lsd ];
+		*p++ = firstlog::zero[ lsd ];
 	} while ( i != 0 );
 
 	if ( value < 0 )
@@ -36,7 +36,7 @@ size_t convertHex( char buf[], uintptr_t value )
 	do{
 		int lsd = i % 16;
 		i /= 16;
-		*p++ = yilelog::digitsHex[ lsd ];
+		*p++ = firstlog::digitsHex[ lsd ];
 	} while ( i != 0 );
 
 	*p = '\0';
