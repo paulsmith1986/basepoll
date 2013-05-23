@@ -18,4 +18,9 @@ void test_ping();
  * 测试任务派发模式(可异步)
  */
 void test_dispatch();
+
+/**
+ * 模拟客户端循环收数据过程
+ */
+void read_packs();
 #endif

@@ -10,9 +10,7 @@ class DemoHandle : public PollHandler
 		void on_socket_fd( fd_struct_t *fd_info, protocol_packet_t *read_packet );
 		void on_signal_fd( fd_struct_t *fd_info );
 		void on_close( fd_struct_t *fd_info );
-		bool check_pack_length( fd_struct_t *fd_info, protocol_packet_t *pack );
 	private:
 		void shut_down( int signal_no );
-		bool is_valid_packet( fd_struct_t *fd_info, protocol_packet_t *read_packet );
 };
 #endif

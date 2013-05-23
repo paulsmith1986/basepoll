@@ -11,4 +11,3 @@ cp /data/wwwroot/tool/build/encode_server.h .
 cp /data/wwwroot/tool/build/decode_server.h .
 cp /data/wwwroot/tool/build/proto_size.h .
 make || echo ' 编译出错'
-#cp /data/im/server/im /data/wwwroot/ch_code/so/

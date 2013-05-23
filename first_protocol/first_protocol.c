@@ -97,8 +97,8 @@ char *read_UTF( protocol_packet_t *re_pack, protocol_result_t *data_pool )
 	{
 		result_copy( re_pack, &data_pool->str[ data_pool->pos ], str_len, data_pool );
 	}
-	re_char[ str_len ] = '\0';
 	add_data_pool_size( re_pack, data_pool, str_len + 1 );
+	re_char[ str_len ] = '\0';
 	return re_char;
 }
 

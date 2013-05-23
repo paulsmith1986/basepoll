@@ -1,20 +1,15 @@
 #include "demo_handle.h"
 void DemoHandle::on_socket_fd( fd_struct_t *fd_info, protocol_packet_t *read_packet )
 {
-	if ( !is_valid_packet( fd_info, read_packet ) )
-	{
-		close_fd_info( fd_info );
-	}
-	else
-	{
-		do_request_task( read_packet, fd_info );
-	}
+	packet_head_t *pack_head = ( packet_head_t* )read_packet->data;
+	printf( "Request packet, pack_id:%d\n", pack_head->pack_id );
+	do_request_task( read_packet, fd_info );
 }
 
 //连接关闭回调
 void DemoHandle::on_close( fd_struct_t *fd_info )
 {
-
+	printf( "Socket fd:%d disconnect!\n", fd_info->fd );
 }
 
 //信号捕捉到
@@ -24,7 +19,6 @@ void DemoHandle::on_signal_fd( fd_struct_t *fd_info )
 	int re = read( fd_info->fd, &fdsi, sizeof( struct signalfd_siginfo ) );
 	if ( re != sizeof( struct signalfd_siginfo ) )
 	{
-		//OUT_ERROR << "Bad read signal size!" << fin;
 		return;
 	}
 	printf( "Catch signal:%d\n", fdsi.ssi_signo );
@@ -51,16 +45,4 @@ void DemoHandle::shut_down( int signal_no )
 {
 	printf( "Server while shutdown!" );
 	exit( 0 );
-}
-
-//数据包类型检查
-bool DemoHandle::is_valid_packet( fd_struct_t *fd_info, protocol_packet_t *read_packet )
-{
-	return true;
-}
-
-//数据包长度检查
-bool DemoHandle::check_pack_length( fd_struct_t *fd_info, protocol_packet_t *pack )
-{
-	return true;
 }

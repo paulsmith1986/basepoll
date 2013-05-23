@@ -66,17 +66,28 @@ struct packet_head_t{
 		data_pool->error_code = PROTO_ERROR_TOOBIG_DATA;							\
 		data_pool->pos = 0;															\
 	}																				\
-	data_pool->pos += add_len
+	else																			\
+	{																				\
+		data_pool->pos += add_len;													\
+	}
+
 
 //将结果的一段拷出
 #define result_copy( re_pack, des, len, result_pool )								\
 	if ( re_pack->pos + len > re_pack->max_pos )									\
 	{																				\
 		result_pool->error_code = PROTO_ERROR_OVERFLOW;								\
+		re_pack->pos += len;														\
 		return NULL;																\
 	}																				\
 	memcpy( des, re_pack->data + re_pack->pos, len );								\
 	re_pack->pos += len
+
+//服务器端数据异常处理
+#define catch_error_packet( byte_pack, fd_info, error_code )
+//客户端数据异常处理
+#define recv_error_packet( byte_pack, error_code )
+
 
 /**
  * adler32效验

@@ -38,6 +38,7 @@ void test_dispatch()
 	add_arg.b = 1616;
 	encode_test_add( send_pack, &add_arg );
 	protocol_send_pack( SOCKET_FD, &send_pack );
+	OUT_LOG << "Send pack test_add" << fin;
 
 	//请求数据包_2
 	const char *email_list[ 5 ];
@@ -63,6 +64,8 @@ void test_dispatch()
 	encode_role_info( role_pack, &role_info );
 	protocol_send_pack( SOCKET_FD, &role_pack );
 
+	OUT_LOG << "Send pack role_info" << fin;
+
 	//请求数据_3
 	proto_car_info_t car_a;
 	proto_car_info_t car_b;
@@ -85,6 +88,10 @@ void test_dispatch()
 	car_arg.car_c = &car_c;
 	encode_car_list( car_pack, &car_arg );
 	protocol_send_pack( SOCKET_FD, &car_pack );
+
+	OUT_LOG << "Send pack car" << fin;
+
+	read_packs();
 }
 
 /**
@@ -99,13 +106,14 @@ void read_packs()
 		protocol_packet_t stack_read_packet;
 		stack_read_packet.data = STACK_READ_PACKET_DATA;
 		stack_read_packet.pos = 0;
-		stack_read_packet.error_code = 0;
 		stack_read_packet.max_pos = sizeof( packet_head_t );
 		stack_read_packet.pool_size = buff_pool_size;
 		stack_read_packet.is_resize = 0;
 		protocol_recv_pack( SOCKET_FD, &stack_read_packet );
-		if ( 0 == stack_read_packet.error_code )
+		//当出错的时候 stack_read_packet.pos 会被置为0
+		if ( 0 != stack_read_packet.pos )
 		{
+			stack_read_packet.pos = sizeof( packet_head_t );
 			do_request_task( &stack_read_packet );
 		}
 		sleep( 1 );
@@ -115,14 +123,14 @@ void read_packs()
 /**
  * 心跳
  */
-void request_ping_re( fd_struct_t *fd_info, proto_ping_re_t *req )
+void request_ping_re( proto_ping_re_t *req )
 {
 }
 
 /**
  * pack_id: 2 加法返回
  */
-void request_test_add_re( fd_struct_t *fd_info, proto_test_add_re_t *req_pack )
+void request_test_add_re( proto_test_add_re_t *req_pack )
 {
 	print_test_add_re( req_pack );
 }
@@ -130,7 +138,7 @@ void request_test_add_re( fd_struct_t *fd_info, proto_test_add_re_t *req_pack )
 /**
  * pack_id: 3 测试私有struct
  */
-void request_role_info_re( fd_struct_t *fd_info, proto_role_info_re_t *req_pack )
+void request_role_info_re( proto_role_info_re_t *req_pack )
 {
 	print_role_info_re( req_pack );
 }
@@ -138,7 +146,7 @@ void request_role_info_re( fd_struct_t *fd_info, proto_role_info_re_t *req_pack 
 /**
  * pack_id: 5 请求
  */
-void request_car_list_re( fd_struct_t *fd_info, proto_car_list_re_t *req_pack )
+void request_car_list_re( proto_car_list_re_t *req_pack )
 {
 	print_car_list_re( req_pack );
 }
