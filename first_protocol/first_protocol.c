@@ -122,7 +122,7 @@ char *read_fix_char( protocol_packet_t *re_pack, protocol_result_t *data_pool, s
  */
 void write_fix_char( char *data, char *result, int len )
 {
-	string_len_t str_len = strlen( data ) + 1;
+	string_len_t str_len = strlen( data );
 	if ( str_len >= len )
 	{
 		str_len = len - 1;
@@ -136,12 +136,11 @@ void write_fix_char( char *data, char *result, int len )
  */
 void first_printf_tab_string( char *re_char, int rank )
 {
-	int len = rank * 4;
 	if ( rank > MAX_LIST_RECURSION )
 	{
-		printf( "Too many list recursion" );
-		return;
+		rank = 1;
 	}
+	int len = rank * 4;
 	int i;
 	for ( i = 0; i < len; i += 4 )
 	{
