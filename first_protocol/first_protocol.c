@@ -166,3 +166,81 @@ void protocol_packet_resize( protocol_packet_t *tmp_pack, uint32_t new_size )
 	tmp_pack->is_resize = 1;
 	tmp_pack->max_pos = new_size;
 }
+
+/**
+ * bin转hex
+ */
+static unsigned char *first_bin2hex( const unsigned char *bin_char, int bin_len )
+{
+	register unsigned char *result = NULL;
+	result = (unsigned char *)malloc( bin_len * 2 + 1 );
+	int i, j;
+	for ( i = j = 0; i < bin_len; ++i )
+	{
+		result[ j++ ] = hexconvtab[ bin_char[ i ] >> 4 ];
+		result[ j++ ] = hexconvtab[ bin_char[ i ] & 15 ];
+	}
+	result[ j ] = '\0';
+	return result;
+}
+
+/**
+ * hex转bin
+ */
+static char *first_hex2bin( const unsigned char *hex_str, int hex_len, int *new_len )
+{
+	if ( 0 != hex_len % 2 )
+	{
+		return NULL;
+	}
+	int target_length = hex_len >> 1;
+	register unsigned char *str = ( unsigned char * )malloc( target_length + 1 );
+	int i, j;
+	for ( i = j = 0; i < target_length; ++i )
+	{
+		char c = hex_str[ j++ ];
+		if ( c >= '0' && c <= '9' )
+		{
+			str[ i ] = ( c - '0' ) << 4;
+		}
+		else if ( c >= 'a' && c <= 'f' )
+		{
+			str[ i ] = ( c - 'a' + 10 ) << 4;
+		}
+		else if ( c >= 'A' && c <= 'F' )
+		{
+			str[ i ] = ( c - 'A' + 10 ) << 4;
+		}
+		else
+		{
+			free( str );
+			return NULL;
+		}
+		c = hex_str[ j++ ];
+		if ( c >= '0' && c <= '9' )
+		{
+			str[ i ] |= c - '0';
+		}
+		else if ( c >= 'a' && c <= 'f' )
+		{
+			str[ i ] |= c - 'a' + 10;
+		}
+		else if ( c >= 'A' && c <= 'F' )
+		{
+			str[ i ] |= c - 'A' + 10;
+		}
+		else
+		{
+			free( str );
+			return NULL;
+		}
+	}
+	str[ target_length ] = '\0';
+
+	//返回新的长度
+	if ( new_len )
+	{
+		*new_len = target_length;
+	}
+	return (char *)str;
+}
