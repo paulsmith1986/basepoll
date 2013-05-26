@@ -1,5 +1,5 @@
-#ifndef YILE_FIGHT_INIT_TOOL_H
-#define YILE_FIGHT_INIT_TOOL_H
+#ifndef FIRST_FIGHT_INIT_TOOL_H
+#define FIRST_FIGHT_INIT_TOOL_H
 #include <stdint.h>
 #pragma pack(1)
 //状态信息_初始化状态工具所用

@@ -18,16 +18,16 @@ int main()
 	//初始化技能公式
 	init_skill_formula();
 	//初始化战斗
-	init_yile_fight();
+	init_first_fight();
 	int read_re = read_fight_config_dat_file( "skill.dat" );
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	printf( "读取配置文件  re:%d\n", read_re );
 	#endif
 	if ( read_re < 0 )
 	{
 		return -1;
 	}
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	read_re = debug_read_config_skill_name( "skill_name.dat" );
 	printf( "读取技能的状态的名称 re:%d\n", read_re );
 	if ( read_re < 0 )
@@ -51,10 +51,7 @@ int main()
 		join_member( new_unit, &combat_info );
 	}
 	combat_info.max_second = 50;
-	while ( 0 == combat_info.is_over )
-	{
-		fight_round( &combat_info );
-	}
+
 	printf( "战斗结束 is_over = %d\n", combat_info.is_over );
 	return 0;
 }
@@ -65,31 +62,31 @@ int main()
 void init_member( fight_unit_t *member, int side, int cell_id, combat_info_t *combat_info )
 {
 	memset( member, 0, sizeof( fight_unit_t ) );
-	member->cell_id = cell_id;
+	/*member->cell_id = cell_id;
 	member->side = side;
-	member->level = yile_rand( 1, 100 );
-	member->life_max = yile_rand( 10000, 20000 );
+	member->level = first_rand( 1, 100 );
+	member->life_max = first_rand( 10000, 20000 );
 	member->life_now = member->life_max;
-	member->anger_max = yile_rand( 100, 200 );
-	member->hit_rating = yile_rand( 5, 50 );
-	member->dodge_ration = yile_rand( 5, 50 );
-	member->deadly_strike = yile_rand( 5, 50 );
-	member->attack_max = yile_rand( 300, 400 );
-	member->attack_min = yile_rand( 200, 300 );
-	member->attack_type = yile_rand( 1, 2 );
-	member->attack_area = yile_rand( 1, 5 );
-	member->ds_damage = yile_rand( 5, 20 );
-	member->defence = yile_rand( 100, 200 );
-	member->suck = yile_rand( 0, 3 );
-	member->damage_return = yile_rand( 0, 3 );
-	member->avoid_ds = yile_rand( 5, 20 );
-	member->avoid_harm = yile_rand( 5, 20 );
-	member->IQ = yile_rand( 50, 100 );
-	member->force = yile_rand( 50, 100 );
-	member->attack_num = yile_rand( 1, 3 );
+	member->anger_max = first_rand( 100, 200 );
+	member->hit_rating = first_rand( 5, 50 );
+	member->dodge_ration = first_rand( 5, 50 );
+	member->deadly_strike = first_rand( 5, 50 );
+	member->attack_max = first_rand( 300, 400 );
+	member->attack_min = first_rand( 200, 300 );
+	member->attack_type = first_rand( 1, 2 );
+	member->attack_area = first_rand( 1, 5 );
+	member->ds_damage = first_rand( 5, 20 );
+	member->defence = first_rand( 100, 200 );
+	member->suck = first_rand( 0, 3 );
+	member->damage_return = first_rand( 0, 3 );
+	member->avoid_ds = first_rand( 5, 20 );
+	member->avoid_harm = first_rand( 5, 20 );
+	member->IQ = first_rand( 50, 100 );
+	member->force = first_rand( 50, 100 );
+	member->attack_num = first_rand( 1, 3 );
 	ext_effect_t *eff = create_ext_effect( combat_info );
-	eff->effect_id = yile_rand( 1, 25 );
-	eff->effect_value = yile_rand( 50, 500 );
+	eff->effect_id = first_rand( 1, 25 );
+	eff->effect_value = first_rand( 50, 500 );
 	eff->need_skill = 0;
 	eff->next = NULL;
 	int skill_id = 1;
@@ -105,11 +102,12 @@ void init_member( fight_unit_t *member, int side, int cell_id, combat_info_t *co
 		tmp_use_skill->skill_level = 3;
 		tmp_use_skill->add_hr = 0;
 		member->skill_level = tmp_use_skill->skill_level;
-		tmp_use_skill->use_anger = yile_rand( 20, 60 );
+		tmp_use_skill->use_anger = first_rand( 20, 60 );
 		tmp_use_skill->skill_info = tmp_skill_info;
 		member->anger_skill = tmp_use_skill;
 	}
 	member->attack_object_eff[ AIM_DIRECT ] = eff;
+	*/
 }
 
 /**

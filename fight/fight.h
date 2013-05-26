@@ -1,6 +1,6 @@
-#ifndef YILE_FIGHT_H
-#define YILE_FIGHT_H
-#include "yile_fight.h"
+#ifndef FIRST_FIGHT_H
+#define FIRST_FIGHT_H
+#include "first_fight.h"
 #include "skill_effect.h"
 #include "struct_pool.h"
 #include "skill_formula.h"

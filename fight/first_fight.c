@@ -1,4 +1,4 @@
-#include "yile_fight.h"
+#include "first_fight.h"
 #include "skill_effect.h"
 #include "skill_formula.h"
 #include "struct_pool.h"
@@ -8,7 +8,7 @@
  * 战斗中的一秒
  * @param	combat_info		战斗信息
  */
-void fight_round( combat_info_t *combat_info )
+void once_second( combat_info_t *combat_info )
 {
 	//战斗超最大时间，正式结束
 	if ( ++combat_info->second > combat_info->max_second )
@@ -28,108 +28,201 @@ void fight_round( combat_info_t *combat_info )
 	fight_dot_life( combat_info->atk_member, combat_info );
 	fight_dot_life( combat_info->def_member, combat_info );
 
-	fight_unit_t **side_member;
-	//确定出手攻击者
-	if ( ATTACK_SIDE == combat_info->now_side )
-	{
-		side_member = combat_info->atk_member;
-	}
-	else
-	{
-		side_member = combat_info->def_member;
-	}
-	#ifdef YILE_DEBUG
-	printf( "*******************当前第 " GREEN_FONT( "%d" ) " 秒*******************\n\n", combat_info->second );
-	#endif
-	//修改战斗的出手数据
-	if ( ATTACK_SIDE == combat_info->now_side )
-	{
-		combat_info->now_side = DEFENCE_SIDE;
-	}
-	else
-	{
-		combat_info->now_side = ATTACK_SIDE;
-	}
-	//用于判断还有没有活人
-	int is_find_role = 0;
-	int i;
+	//出手顺序
+	static const int attack_seqence[ 9 ] = { 5, 2, 8, 4, 1, 7, 3, 0, 6 };
+	register int now_fight_time = combat_info->second;
+	//确认出手者
+	register int i;
 	for ( i = 0; i < SIDE_MEMBER; ++i )
 	{
-		//位置没人,或者 已经亡 或者 眩晕
-		if ( NULL == side_member[ i ] || is_dead( side_member[ i ] ) || side_member[ i ]->stun )
+		fight_unit_t *round_attack_member[ 2 ] = {NULL, NULL};
+		//攻击方该位置有人
+		if ( check_is_round( combat_info->atk_member, i, now_fight_time ) )
+		{
+			round_attack_member[ 0 ] = combat_info->atk_member[ i ];
+		}
+		//防守方有人
+		if ( check_is_round( combat_info->def_member, i, now_fight_time ) )
+		{
+			round_attack_member[ 1 ] = combat_info->def_member[ i ];
+		}
+		//当攻击和防守方都有人时
+		if ( NULL != round_attack_member[ 0 ] && NULL != round_attack_member[ 1 ] )
+		{
+			once_round( round_attack_member[ combat_info->now_rand_side ], combat_info );
+			round_attack_member[ combat_info->now_rand_side ] = NULL;
+			combat_info->now_rand_side = 1 - combat_info->now_rand_side;
+		}
+		//双方都没有人出手
+		if ( NULL == round_attack_member[ 0 ] && NULL == round_attack_member[ 1 ] )
 		{
 			continue;
 		}
-		is_find_role = 1;
-		fight_unit_t *attack_member = side_member[ i ];
-		if ( attack_member->attack_time <= combat_info->second )
+		//攻击方有人出手
+		else if ( NULL != round_attack_member[ 0 ] )
 		{
-			once_attack( attack_member, combat_info );
+			once_round( round_attack_member[ 0 ], combat_info );
 		}
-	}
-	//未找到出手成员（程序出错，容错）
-	if ( 0 == is_find_role )
-	{
-		combat_info->is_over = 1;
-		fight_final_end( combat_info );
-		return;
+		else
+		{
+			once_round( round_attack_member[ 1 ], combat_info );
+		}
 	}
 }
 
 /**
- * 一次攻击过程
- * @param	attack_member	战斗成员
- * @param	combat_info		战斗信息
+ * 尝试使用某个技能
  */
-void once_attack( fight_unit_t *attack_member, combat_info_t *combat_info )
+int try_use_skill( fight_unit_t *attack_member, use_skill_t *use_skill, combat_info_t *combat_info )
 {
-	#ifdef YILE_DEBUG
-	printf( GREEN_FONT( "\n[ATTACK]" )"当前出手人 " YELLOW_FONT( "%d_%d" ) " 气血:%d\n", attack_member->side, attack_member->cell_id, attack_member->life_now );
-	#endif
+	skill_t *skill_info = use_skill->skill_info;
+	//被锁穴了，斗气技能不能使出来
+	if ( attack_member->no_skill && 1 == skill_info->skill_type )
+	{
+		return 0;
+	}
+	//出手轮数不够，还不能使用技能
+	if ( attack_member->round_num < skill_info->start_round )
+	{
+		return 0;
+	}
+	//斗气技能
+	if ( 1 == skill_info->skill_type )
+	{
+		//技能冻结时间还未结束
+		if ( combat_info->second < use_skill->cd_use_time )
+		{
+			#ifdef FIRST_DEBUG
+			php_printf( "怒气技能在CD中，时间到 %d 秒\n", use_skill->cd_use_time );
+			#endif
+			return 0;
+		}
+		#ifdef FIRST_DEBUG
+		php_printf( " 需要消耗斗气:%d 当前斗气 %d\n", use_skill->skill_cost, attack_member->vigour_now );
+		#endif
+		if ( attack_member->vigour_now < use_skill->skill_cost )
+		{
+			return 0;
+		}
+	}
+	//怒气技能
+	else if ( 2 == skill_info->skill_type )
+	{
+		if ( combat_info->second < use_skill->cd_use_time )
+		{
+			#ifdef FIRST_DEBUG
+			php_printf( "怒气技能在CD中，时间到 %d 秒\n", use_skill->cd_use_time );
+			#endif
+			return 0;
+		}
+		#ifdef FIRST_DEBUG
+		php_printf( " 需要消耗怒气:%d 当前怒气 %d\n", use_skill->skill_cost, use_skill->anger_now );
+		#endif
+		if ( attack_member->anger_now < use_skill->skill_cost )
+		{
+			return 0;
+		}
+	}
+	//之后所有的公式都用skill_level
+	attack_member->skill_level = use_skill->skill_level;
+	//计算气血消耗
+	int life_cost = 0;
+	//写死的
+	if ( 0 == skill_info->life_cost[ 0 ] )
+	{
+		life_cost = skill_info->life_cost[ 1 ];
+	}
+	//公式算出来的值
+	else if ( 1 == skill_info->life_cost[ 0 ] )
+	{
+		life_cost = skill_formula( skill_info->life_cost[ 1 ], attack_member );
+	}
+	//需要消耗气血
+	if ( life_cost > 0 )
+	{
+		if ( attack_member->life_now < life_cost )
+		{
+			#ifdef FIRST_DEBUG
+			php_printf( " 需要消耗气血 %d 当前气血 %d", life_cost, attack_member->life_now );
+			#endif
+			return 0;
+		}
+		else
+		{
+			change_life_value( attack_member, DAMAGE_SKILL_COST, life_cost, combat_info );
+		}
+	}
+	//斗气值改变
+	if ( 1 == skill_info->skill_type )
+	{
+		change_vigour_value( attack_member, use_skill->skill_cost * -1, combat_info );
+	}
+	//怒气值改变
+	else
+	{
+		change_anger_value( attack_member, use_skill->skill_cost * -1, combat_info );
+	}
+	//确定下一次出手的时间
+	if ( skill_info->skill_cd > 0 )
+	{
+		#ifdef FIRST_DEBUG
+		php_printf( " 该技能CD时间为 %d", skill_info->skill_cd );
+		#endif
+		use_skill->cd_use_time = combat_info->second + skill_info->skill_id;
+	}
+	return 1;
+}
+
+/**
+ * 一个成员的一轮
+ */
+void once_round( fight_unit_t *attack_member, combat_info_t *combat_info )
+{
+	//下一次出手的时间
+	attack_member->next_round += attack_member->base_speed;
+	attack_member->round_num++;
+	change_anger_value( attack_member, ANGER_ADD_NUM, combat_info );
+	//空技能
 	skill_t vitual_skill;
 	//空技能
 	use_skill_t vitual_use_skill;
 	//判断是否使用怒气技能
 	use_skill_t *use_skill;
-	#ifdef YILE_DEBUG
-	if ( NULL == attack_member->anger_skill )
+	if ( NULL != attack_member->anger_skill && try_use_skill( attack_member, attack_member->anger_skill, combat_info ) )
 	{
-		printf( "\n（没有 怒气技能）\n" );
+		use_skill = attack_member->vigour_skill;
+	}
+	else if ( NULL != attack_member->vigour_skill && try_use_skill( attack_member, attack_member->vigour_skill, combat_info ) )
+	{
+		use_skill = attack_member->vigour_skill;
 	}
 	else
 	{
-		printf( "\n当前怒气值:" GREEN_FONT( "%d" ) " 技能需要怒气值:" GREEN_FONT( "%d" ) "\n", attack_member->anger_now, attack_member->anger_skill->use_anger );
-	}
-	#endif
-	//出手时增加的怒气值
-	int attack_add_anger = ANGER_ADD_NUM;
-	if ( is_anger_skill_take( attack_member ) )
-	{
-		#ifdef YILE_DEBUG
-		printf( "攻击方式: " CYAN_FONT( "  ≌怒气技能≌ " ) " 技能名称:" YELLOW_FONT( "%s\n" ), debug_skill_name( attack_member->anger_skill->skill_info->skill_id ) );
-		#endif
-		use_skill = attack_member->anger_skill;
-		//怒气减去技能消耗掉的
-		attack_add_anger -= use_skill->use_anger;
-	}
-	//构造一个空技能 普通攻击也相当于技能
-	else
-	{
-		#ifdef YILE_DEBUG
-		printf(	"攻击方式: " PINK_FONT( "普通攻击" ) );
-		#endif
 		memset( &vitual_skill, 0, sizeof( skill_t ) );
-		vitual_skill.attack_num = attack_member->attack_num;
-		vitual_skill.attack_type = attack_member->attack_type;
-		vitual_skill.object_aim = attack_member->attack_area;
-		vitual_skill.self_aim = attack_member->attack_area;
-		vitual_skill.self_hit_rating[ 0 ] = 1;
-		vitual_skill.object_hit_rating[ 0 ] = 1;
+		vitual_skill.attack_num = 1;
+		vitual_skill.object_aim = 0;
+		vitual_skill.self_aim = 0;
+		vitual_skill.self_hit_ration[ 0 ] = 1;
+		vitual_skill.object_hit_ration[ 0 ] = 1;
 		vitual_use_skill.skill_info = &vitual_skill;
 		vitual_use_skill.add_hr = 0;
 		vitual_use_skill.skill_level = 0;
 		use_skill = &vitual_use_skill;
+		use_skill = &vitual_use_skill;
 	}
+	//攻击
+	once_attack( attack_member, use_skill, combat_info, ATTACK_NORMAL );
+}
+
+/**
+ * 一次攻击过程
+ * @param	attack_member	战斗成员
+ * @param	use_skill		使用的技能
+ * @param	combat_info		战斗信息
+ * @param	atta_type		攻击类型 1:正常攻击 2:反击
+ */
+void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill, combat_info_t *combat_info, int attack_type )
+{
 	skill_t *skill_info = use_skill->skill_info;
 
 	//输出结果
@@ -141,21 +234,19 @@ void once_attack( fight_unit_t *attack_member, combat_info_t *combat_info )
 	pack_attack.attack_area = skill_info->attack_num;
 	push_fight_result( combat_info, &pack_attack, sizeof( result_pack_attack_t ) );
 
-	//怒气改变
-	change_anger_value( attack_member, attack_add_anger, combat_info );
 	//目标列表
 	int aim_list[ SIDE_MEMBER ];
 	int aim_id;
 	//己方作用人数
 	int self_aim_num = 0;
 	fight_unit_t **my_side_member;
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	printf( YELLOW_FONT( "\n==========" GREEN_FONT( "己方目标" ) "========== " ) );
 	#endif
 	//技能对自己方有效果或者状态
 	if ( is_do_self_side( skill_info, attack_member ) )
 	{
-		#ifdef YILE_DEBUG
+		#ifdef FIRST_DEBUG
 		printf( " \n目标类型 " );
 		#endif
 		find_oppose_side( 1 - attack_member->side, combat_info, my_side_member );
@@ -172,19 +263,19 @@ void once_attack( fight_unit_t *attack_member, combat_info_t *combat_info )
 			pasv_skill_effect_and_buff( attack_member, aim_member, 0 == aim_id, skill_info->skill_id, combat_info );
 
 			//技能命中率 对己方的默认命中为100
-			int hit_rating = get_skill_hit_rating( skill_info->self_hit_rating[ 0 ], skill_info->self_hit_rating[ 1 ], attack_member, 100 );
+			int hit_ration = get_skill_hit_ration( skill_info->self_hit_ration[ 0 ], skill_info->self_hit_ration[ 1 ], attack_member, 100 );
 			//技能命中增加
 			if ( 0 != use_skill->add_hr )
 			{
-				#ifdef YILE_DEBUG
+				#ifdef FIRST_DEBUG
 				printf( " 技能命中率增加：" GREEN_FONT( " %d" ), use_skill->add_hr );
 				#endif
-				hit_rating += use_skill->add_hr;
+				hit_ration += use_skill->add_hr;
 			}
-			if ( !is_rand( hit_rating ) )
+			if ( !is_rand( hit_ration ) )
 			{
-				#ifdef YILE_DEBUG
-				printf( " 对自己方，合计命中率：" GREEN_FONT( " %d" ) RED_FONT( "【Miss】" ), hit_rating );
+				#ifdef FIRST_DEBUG
+				printf( " 对自己方，合计命中率：" GREEN_FONT( " %d" ) RED_FONT( "【Miss】" ), hit_ration );
 				#endif
 				continue;
 			}
@@ -200,19 +291,19 @@ void once_attack( fight_unit_t *attack_member, combat_info_t *combat_info )
 			}
 		}
 	}
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	else
 	{
 		printf( " 【NULL】 " );
 	}
 	#endif
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	printf( YELLOW_FONT( "\n==========" ) RED_FONT( "敌方目标" ) YELLOW_FONT( "========== " ) );
 	#endif
 	//技能对敌方有作用效果
 	if ( is_live( attack_member ) && is_attack_object( skill_info, attack_member ) )
 	{
-		#ifdef YILE_DEBUG
+		#ifdef FIRST_DEBUG
 		printf( "\n 目标类型 " );
 		#endif
 		//对方所有成员
@@ -221,7 +312,7 @@ void once_attack( fight_unit_t *attack_member, combat_info_t *combat_info )
 		int direct_aim = find_direct_aim( attack_member->cell_id, aim_side_member );
 		//找出本次攻击对方受影响的列表
 		int object_aim_num = find_indirect_aim( skill_info->object_aim, direct_aim, aim_list, aim_side_member );
-		#ifdef YILE_DEBUG
+		#ifdef FIRST_DEBUG
 		printf( "\n攻击次数:" RED_FONT( "%d " ), skill_info->attack_num );
 		debug_attack_type( skill_info->attack_type, "\n" );
 		#endif
@@ -233,25 +324,30 @@ void once_attack( fight_unit_t *attack_member, combat_info_t *combat_info )
 			{
 				continue;
 			}
-			//被攻击者加怒气
-			change_anger_value( aim_member, ANGER_ADD_NUM, combat_info );
-			#ifdef YILE_DEBUG
+
+			//普通攻击，被攻击的人增加怒气
+			if ( ATTACK_NORMAL == attack_type )
+			{
+				change_anger_value( aim_member, ANGER_ADD_NUM, combat_info );
+			}
+
+			#ifdef FIRST_DEBUG
 			printf( RED_FONT( "\n【被击】" ) "成员: %d_%d 气血:%d \n\t", aim_member->side, aim_member->cell_id, aim_member->life_now );
 			#endif
 			//小优化..当确定使用人物命中率时才计算普通攻击的命中率
-			int nomal_hr = 1 == skill_info->self_hit_rating[ 0 ] ? get_hit_rating( attack_member, aim_member ) : 0;
+			int nomal_hr = 1 == skill_info->self_hit_ration[ 0 ] ? get_hit_ration( attack_member, aim_member ) : 0;
 			//本次攻击的命中率
-			int hit_rating = get_skill_hit_rating( skill_info->self_hit_rating[ 0 ], skill_info->self_hit_rating[ 1 ], attack_member, nomal_hr );
+			int hit_ration = get_skill_hit_ration( skill_info->self_hit_ration[ 0 ], skill_info->self_hit_ration[ 1 ], attack_member, nomal_hr );
 			//技能命中增加
 			if ( 0 != use_skill->add_hr )
 			{
-				#ifdef YILE_DEBUG
+				#ifdef FIRST_DEBUG
 				printf( " 技能命中率增加：" GREEN_FONT( " %d" ), use_skill->add_hr );
 				#endif
-				hit_rating += use_skill->add_hr;
+				hit_ration += use_skill->add_hr;
 			}
 			//第一次判断的命中率
-			int is_first_time_hr = is_rand( hit_rating );
+			int is_first_time_hr = is_rand( hit_ration );
 			int is_pasv_effect_done = 0;
 			//技能效果和状态的命中判断
 			if ( is_first_time_hr )
@@ -271,22 +367,11 @@ void once_attack( fight_unit_t *attack_member, combat_info_t *combat_info )
 				{
 					skill_buff( attack_member, aim_member, skill_info->object_buff, use_skill->skill_level, combat_info );
 				}
-
-				//清除被攻击者的当下效果(策划填表出错的情况)
-				if ( is_live( aim_member ) )
-				{
-					memset( &aim_member->once_effect, 0, sizeof( effect_once_t ) );
-				}
-				//被攻击者阵亡
-				else
-				{
-					continue;
-				}
 			}
 			//被闪避
 			else
 			{
-				#ifdef YILE_DEBUG
+				#ifdef FIRST_DEBUG
 				printf( CYAN_FONT( "【MISS】 " ) );
 				#endif
 				fight_dr_pack( aim_member );
@@ -299,9 +384,21 @@ void once_attack( fight_unit_t *attack_member, combat_info_t *combat_info )
 				for ( attack_i = 0; attack_i < skill_info->attack_num; ++attack_i )
 				{
 					//每一次单独命中判断
-					if ( ( 0 == attack_i && is_first_time_hr ) || ( 0 != attack_i && is_rand( hit_rating ) ) )
+					if ( ( 0 == attack_i && is_first_time_hr ) || ( 0 != attack_i && is_rand( hit_ration ) ) )
 					{
-						normal_attack( attack_member, aim_member, skill_info->attack_type, combat_info );
+						//如果该技能打多人时，攻击力有递增功能
+						if ( 0 != skill_info->attack_step && 0 != attack_i )
+						{
+							//先加上去这个临时增加的攻击
+							attack_member->once_effect.attack_rate += skill_info->attack_step;
+							normal_attack( attack_member, aim_member, combat_info );
+							//再减掉这个临时增加的攻击
+							attack_member->once_effect.attack_rate -= skill_info->attack_step;
+						}
+						else
+						{
+							normal_attack( attack_member, aim_member, combat_info );
+						}
 						//检测被动技能效果和状态有没有执行过
 						if ( !is_pasv_effect_done )
 						{
@@ -317,10 +414,25 @@ void once_attack( fight_unit_t *attack_member, combat_info_t *combat_info )
 					//继续输出闪避包
 					else if ( 0 != attack_i )
 					{
-						#ifdef YILE_DEBUG
+						#ifdef FIRST_DEBUG
 						printf( CYAN_FONT( "【MISS】 " ) );
 						#endif
 						fight_dr_pack( aim_member );
+					}
+				}
+				//如果是第一个受攻击者,判断反击
+				if ( ATTACK_NORMAL == attack_type && 0 == aim_id )
+				{
+					for ( attack_i = 0; attack_i < skill_info->attack_num; ++attack_i )
+					{
+						if ( is_live( aim_member ) && is_live( aim_member ) && 0 == aim_member->stun )
+						{
+							int attack_back_ration = get_ca_rate( aim_member, attack_member );
+							if ( is_rand( attack_back_ration ) )
+							{
+								counter_attack( attack_member, aim_member, combat_info );
+							}
+						}
 					}
 				}
 			}
@@ -332,7 +444,7 @@ void once_attack( fight_unit_t *attack_member, combat_info_t *combat_info )
 			}
 		}
 	}
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	else
 	{
 		printf( " 【NULL】 " );
@@ -359,9 +471,8 @@ void once_attack( fight_unit_t *attack_member, combat_info_t *combat_info )
 		{
 			next_time = combat_info->side_num[ attack_member->side ];
 		}
-		attack_member->attack_time = combat_info->second + next_time;
 	}
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	printf( "\n" );
 	#endif
 	//状态过期
@@ -377,6 +488,31 @@ void once_attack( fight_unit_t *attack_member, combat_info_t *combat_info )
 			fight_final_end( combat_info );
 		}
 	}
+}
+
+/**
+ * 反击攻击
+ * @param	attack_member	攻击者
+ * @param	aim_member		防守者
+ * @param	combat_info		战斗信息
+ */
+void counter_attack( fight_unit_t *attack_member, fight_unit_t *aim_member, combat_info_t *combat_info )
+{
+	int tmp_hr = get_hr_rate( attack_member, aim_member );
+	if ( is_rand( tmp_hr ) )
+	{
+		normal_attack( attack_member, aim_member, combat_info );
+		//判断给对手的状态或者效果
+		if ( is_live( attack_member ) && is_live( aim_member ) )
+		{
+
+		}
+	}
+	else
+	{
+		//闪避
+	}
+
 }
 
 /**
@@ -447,17 +583,17 @@ void pasv_skill_effect_and_buff( fight_unit_t *attack_member, fight_unit_t *aim_
  * @param	attack_member	攻击者
  * @param	aim_member		被攻击者
  */
-int get_hit_rating( fight_unit_t *attack_member, fight_unit_t *aim_member )
+int get_hit_ration( fight_unit_t *attack_member, fight_unit_t *aim_member )
 {
-	#ifdef YILE_DEBUG
-	printf( "\n 人物命中率:" GREEN_FONT( " %d " ) " 当下命中率增加:" GREEN_FONT( " %d" ) " 对手闪避率" RED_FONT( " %d" ), 100 + attack_member->hit_rating, attack_member->once_effect.hr, aim_member->dodge_ration );
+	#ifdef FIRST_DEBUG
+	printf( "\n 人物命中率:" GREEN_FONT( " %d " ) " 当下命中率增加:" GREEN_FONT( " %d" ) " 对手闪避率" RED_FONT( " %d" ), 100 + attack_member->hit_ration, attack_member->once_effect.hr, aim_member->dodge_ration );
 	#endif
-	int tmp_hr = ( 100 + attack_member->hit_rating + attack_member->once_effect.hr ) - ( aim_member->dodge_ration ) ;
+	int tmp_hr = ( 100 + attack_member->hit_ration + attack_member->once_effect.hr ) - ( aim_member->dodge_ration ) ;
 	if ( tmp_hr < 5 )
 	{
 		tmp_hr = 5;
 	}
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	printf( " role_hr_total: " GREEN_FONT( " %d\n" ), tmp_hr );
 	#endif
 	return tmp_hr;
@@ -470,14 +606,14 @@ int get_hit_rating( fight_unit_t *attack_member, fight_unit_t *aim_member )
  * @param	attack_member	战斗成员
  * @param	role_hr			人物的命中率
  */
-int get_skill_hit_rating( int hr_type, int hr_value, fight_unit_t *attack_member, int role_hr )
+int get_skill_hit_ration( int hr_type, int hr_value, fight_unit_t *attack_member, int role_hr )
 {
 	int re = role_hr;
 	//固定的值
 	if ( 2 == hr_type )
 	{
 		re = hr_value;
-		#ifdef YILE_DEBUG
+		#ifdef FIRST_DEBUG
 		printf( "\n命中率固定值:" GREEN_FONT( " %d" ), hr_value );
 		#endif
 	}
@@ -485,7 +621,7 @@ int get_skill_hit_rating( int hr_type, int hr_value, fight_unit_t *attack_member
 	else if ( 3 == hr_type )
 	{
 		re = skill_formula( hr_value, attack_member );
-		#ifdef YILE_DEBUG
+		#ifdef FIRST_DEBUG
 		printf( "\n命中率公式计算:" GREEN_FONT( " %d" ), re );
 		#endif
 	}
@@ -535,12 +671,12 @@ void add_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, buff_t *bu
 	{
 		return;
 	}
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	printf( CYAN_FONT( "\n〓〓〓〓〓〓〓〓" ) "成员 " CYAN_FONT( "%d_%d" ) " 增加 ", aim_member->side, aim_member->cell_id );
 	debug_buff_type( buff_info->buff_type );
 	printf( " " YELLOW_FONT( "【%s】 时间:" GREEN_FONT( "%d 秒\n" ) ), debug_buff_name( buff_info->buff_id ), buff_last_time );
 	#endif
-	fight_buff_t *same_buff = chk_have_buff( aim_member, buff_info->buff_id );
+	fight_buff_t *same_buff = chk_have_buff( aim_member, buff_info );
 	//已经有相同的状态了
 	if ( NULL != same_buff )
 	{
@@ -550,22 +686,23 @@ void add_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, buff_t *bu
 			remove_buff( attack_member, same_buff, REMOVE_BUFF_ONE, combat_info );
 		}
 	}
+	int expire_type = buff_info->expire_type;
 	fight_buff_t *new_buff = create_fight_buff( combat_info );
 	new_buff->expire = buff_last_time + combat_info->second;
 	new_buff->level = skill_level;
 	new_buff->buff_info = buff_info;
 	new_buff->by_member_id = attack_member->index;
 	//之前没有任何状态
-	if ( NULL == aim_member->buff_list )
+	if ( NULL == aim_member->buff_list[ expire_type ] )
 	{
 		new_buff->next = NULL;
-		aim_member->buff_list = new_buff;
+		aim_member->buff_list[ expire_type ] = new_buff;
 	}
 	//按过期先后顺序插入
 	else
 	{
 		fight_buff_t *last_buff = NULL;
-		fight_buff_t *head_buff = aim_member->buff_list;
+		fight_buff_t *head_buff = aim_member->buff_list[ expire_type ];
 		int is_insert = 0;
 		while ( NULL != head_buff )
 		{
@@ -576,7 +713,7 @@ void add_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, buff_t *bu
 				new_buff->next = head_buff;
 				if ( NULL == last_buff )
 				{
-					aim_member->buff_list = new_buff;
+					aim_member->buff_list[ expire_type ] = new_buff;
 				}
 				else
 				{
@@ -651,7 +788,8 @@ void add_extend_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, ext
 void remove_buff( fight_unit_t *member, fight_buff_t *buff, int remove_type, combat_info_t *combat_info )
 {
 	fight_buff_t *last_buff;
-	fight_buff_t *head_buff = member->buff_list;
+	int expire_type = buff->buff_info->expire_type;
+	fight_buff_t *head_buff = member->buff_list[ expire_type ];
 	while ( NULL != head_buff )
 	{
 		int is_remove = 0;
@@ -705,9 +843,9 @@ void remove_buff( fight_unit_t *member, fight_buff_t *buff, int remove_type, com
 		if ( is_remove )
 		{
 			//在表头
-			if ( head_buff == member->buff_list )
+			if ( head_buff == member->buff_list[ expire_type ] )
 			{
-				member->buff_list = head_buff->next;
+				member->buff_list[ expire_type ] = head_buff->next;
 			}
 			//不在表头
 			else
@@ -716,7 +854,7 @@ void remove_buff( fight_unit_t *member, fight_buff_t *buff, int remove_type, com
 			}
 			fight_buff_t *tmp_del = head_buff;
 			head_buff = head_buff->next;
-			#ifdef YILE_DEBUG
+			#ifdef FIRST_DEBUG
 			printf(  GREEN_FONT( "\n〓〓〓〓〓〓〓〓" ) "成员 " CYAN_FONT( "%d_%d" ) " 移除 ", member->side, member->cell_id );
 			debug_buff_type( tmp_del->buff_info->buff_type );
 			printf( " " YELLOW_FONT( "【%s】" ) "，移除原因：", debug_buff_name( tmp_del->buff_info->buff_id ) );
@@ -752,13 +890,18 @@ void remove_buff( fight_unit_t *member, fight_buff_t *buff, int remove_type, com
  */
 void clean_role_buff_list( fight_unit_t *member, combat_info_t *combat_info )
 {
-	fight_buff_t *head_buff = member->buff_list;
-	while ( NULL != head_buff )
+	int i;
+	for ( i = 0; i < 2; ++i )
 	{
-		fight_buff_t *del_buff = head_buff;
-		head_buff = head_buff->next;
-		destroy_fight_buff( del_buff, combat_info );
+		fight_buff_t *head_buff = member->buff_list[ i ];
+		while ( NULL != head_buff )
+		{
+			fight_buff_t *del_buff = head_buff;
+			head_buff = head_buff->next;
+			destroy_fight_buff( del_buff, combat_info );
+		}
 	}
+
 }
 
 /**
@@ -871,7 +1014,7 @@ void direct_extend_effect( fight_unit_t *aim_member, ext_effect_t *effect_head, 
  */
 void do_skill_effect( fight_unit_t *aim_member, int effect_id, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
 {
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	if ( EFFECT_ONCE == effect_type )
 	{
 		printf( "\n------" RED_FONT( "〖当下效果〗" ) "------" );
@@ -899,19 +1042,19 @@ void do_skill_effect( fight_unit_t *aim_member, int effect_id, int effect_value,
 
 /**
  * 查看是否拥有相同的状态
- * @param	buff_id			状态ID
  * @param	aim_member		状态承受者
+ * @param	buff_info		状态信息
  */
-fight_buff_t *chk_have_buff( fight_unit_t *aim_member, int buff_id )
+fight_buff_t *chk_have_buff( fight_unit_t *aim_member, buff_t *buff_info )
 {
-	if ( NULL == aim_member->buff_list )
+	if ( NULL == aim_member->buff_list[ buff_info->expire_type ] )
 	{
 		return NULL;
 	}
-	fight_buff_t *tmp_buff = aim_member->buff_list;
+	fight_buff_t *tmp_buff = aim_member->buff_list[ buff_info->expire_type ];
 	while ( NULL != tmp_buff )
 	{
-		if ( tmp_buff->buff_info->buff_id == buff_id )
+		if ( tmp_buff->buff_info->buff_id == buff_info->buff_id )
 		{
 			return tmp_buff;
 		}
@@ -930,142 +1073,76 @@ fight_buff_t *chk_have_buff( fight_unit_t *aim_member, int buff_id )
  */
 int find_indirect_aim( int aim_type, int direct_aim, int aim_list[], fight_unit_t *aim_member[] )
 {
-	int aim_num = 0;	//目标个数
+	int buf_pos = 0;
+	aim_list[ buf_pos++ ] = direct_aim;
 	switch ( aim_type )
 	{
-		case ATTACK_TYPE_ONE:	//单体
-			aim_num = 1;
-			aim_list[ 0 ] = direct_aim;
-			#ifdef YILE_DEBUG
-			printf( YELLOW_FONT( "《单体目标》" ) );
-			#endif
-		break;
-		case ATTACK_TYPE_ROW:	//横排
+		case 1:						//扫荡攻击
 		{
-			#ifdef YILE_DEBUG
-			printf( YELLOW_FONT( "《横排目标》" ) );
-			#endif
-			aim_list[ 0 ] = direct_aim;
-			if ( 0 == direct_aim % 2 )
+			int tmp_pos = ( direct_aim + 3 ) % 9;
+			check_cell_member_alive( tmp_pos );
+			tmp_pos = ( direct_aim + 6 ) % 9;
+			check_cell_member_alive( tmp_pos );
+			break;
+		}
+		case 2:						//突进攻击
+		{
+			int tmp_mod = direct_aim % 3;
+			if ( 0 == tmp_mod )
 			{
-				aim_num = 2;
-				aim_list[ 1 ] = direct_aim + 1;
+				check_cell_member_alive( direct_aim + 1 );
+				check_cell_member_alive( direct_aim + 2 );
 			}
-			else
+			else if ( 1 == tmp_mod )
 			{
-				aim_num = 1;
+				check_cell_member_alive( direct_aim + 1 );
 			}
 			break;
 		}
-		case ATTACK_TYPE_COL:	//纵列
+		case 3:						//半突进攻击
 		{
-			#ifdef YILE_DEBUG
-			printf( YELLOW_FONT( "《纵列目标》" ) );
-			#endif
-			aim_list[ 0 ] = direct_aim;
-			int col_pos = direct_aim % 2;
-			int i = 0, aim_pos = 1;
+			int tmp_mod = direct_aim % 3;
+			if ( 2 != tmp_mod )
+			{
+				check_cell_member_alive( direct_aim + 1 );
+			}
+			break;
+		}
+		case 4:						//传递进攻
+		{
+			if ( 2 != direct_aim % 3 )
+			{
+				check_cell_member_alive( direct_aim + 1 );
+			}
+			if ( 0 != direct_aim % 3 )
+			{
+				check_cell_member_alive( direct_aim - 1 );
+			}
+			if ( direct_aim > 2 )
+			{
+				check_cell_member_alive( direct_aim - 3 );
+			}
+			if ( direct_aim < 6 )
+			{
+				check_cell_member_alive( direct_aim + 3 );
+			}
+			break;
+		}
+		case 5:						//全攻击
+		{
+			int i;
 			for ( i = 0; i < SIDE_MEMBER; ++i )
 			{
-				if ( NULL == aim_member[ i ] || direct_aim == aim_member[ i ]->cell_id )
+				if ( i == direct_aim )
 				{
 					continue;
 				}
-				if ( col_pos == aim_member[ i ]->cell_id % 2 )
-				{
-					aim_list[ aim_pos++ ] = i;
-				}
+				check_cell_member_alive( i );
 			}
-			aim_num = aim_pos;
-			break;
-		}
-		case ATTACK_TYPE_BESIDE:	//相邻位置
-			#ifdef YILE_DEBUG
-			printf( YELLOW_FONT( "《相邻目标》" ) );
-			#endif
-			aim_num = find_neighbour( direct_aim, aim_list );
-		break;
-		case ATTACK_TYPE_ALL: //全体
-		{
-			#ifdef YILE_DEBUG
-			printf( YELLOW_FONT( "《全体目标》" ) );
-			#endif
-			aim_list[ 0 ] = direct_aim;
-			int i = 0, aim_pos = 1;
-			for ( i = 0; i < SIDE_MEMBER; ++i )
-			{
-				if ( NULL == aim_member[ i ] || direct_aim == aim_member[ i ]->cell_id )
-				{
-					continue;
-				}
-				aim_list[ aim_pos++ ] = i;
-			}
-			aim_num = aim_pos;
 			break;
 		}
 	}
-	#ifdef YILE_DEBUG
-	int aim_id;
-	printf( " 目标列表 " );
-	for ( aim_id = 0; aim_id < aim_num; ++aim_id )
-	{
-		if ( NULL == aim_member[ aim_id ] || is_dead( aim_member[ aim_id ] ) )
-		{
-			continue;
-		}
-		printf( YELLOW_FONT( " %d" ), aim_list[ aim_id ] );
-		if ( 0 == aim_id )
-		{
-			printf( "（直接）" );
-		}
-		printf( "、" );
-	}
-	#endif
-	return aim_num;
-}
-
-/**
- * 找到每一个位置的相邻位置
- * @param	direct_aim		直接目标
- * @param	aim_list		作用范围目标列表
- */
-int find_neighbour( int direct_aim, int aim_list[] )
-{
-	int aim_num;
-	aim_list[ 0 ] = direct_aim;
-	switch ( direct_aim )
-	{
-		case 2: //第一排第一列
-			aim_num = 3;
-			aim_list[ 1 ] = 3;
-			aim_list[ 2 ] = 0;
-		break;
-		case 0:	//第二排第一列
-			aim_num = 4;
-			aim_list[ 1 ] = 2;
-			aim_list[ 2 ] = 1;
-			aim_list[ 3 ] = 4;
-		break;
-		case 4:	//第三排第一列
-			aim_num = 3;
-			aim_list[ 1 ] = 0;
-			aim_list[ 2 ] = 5;
-		break;
-		case 3:	//第一排第二列
-			aim_num = 2;
-			aim_list[ 1 ] = 1;
-		break;
-		case 1:	//第二排第二列
-			aim_num = 3;
-			aim_list[ 1 ] = 3;
-			aim_list[ 2 ] = 5;
-		break;
-		case 5:	//第三排第二列
-			aim_num = 2;
-			aim_list[ 1 ] = 1;
-		break;
-	}
-	return aim_num;
+	return buf_pos;
 }
 
 /**
@@ -1076,71 +1153,32 @@ int find_neighbour( int direct_aim, int aim_list[] )
  */
 int find_direct_aim( int my_cell, fight_unit_t *aim_member[] )
 {
-	//出手的人,假定都在第一排,不影响攻击目标
-	if ( 0 != my_cell % 2 )
+	int line = floor( my_cell / 3 );
+	int beg_pos;			//循环开始位置
+	int find_direct = 1;	//当在一行没有找到时，向上还是向下找的控制符
+	if ( 0 == line )
 	{
-		--my_cell;
+		find_direct = -1;
 	}
-	//检测对面第一排是否有人
-	if ( NULL != aim_member[ my_cell ] )
+	int for_time, i;
+	for ( for_time = 0; for_time <= 3; ++for_time )
 	{
-		return my_cell;
-	}
-	//检测对面第二排是否有人
-	if ( NULL != aim_member[ my_cell + 1 ] )
-	{
-		return my_cell + 1;
-	}
-	int need_find_arr[ SIDE_MEMBER - 2 ];
-	//换行查找
-	switch ( my_cell )
-	{
-		case 2:	//第一行,换第2行,第3行
-			need_find_arr[ 0 ] = 0;
-			need_find_arr[ 1 ] = 1;
-			need_find_arr[ 2 ] = 4;
-			need_find_arr[ 3 ] = 5;
-		break;
-		case 0: //第二行,换第1行,第3行
-			need_find_arr[ 0 ] = 2;
-			need_find_arr[ 1 ] = 3;
-			need_find_arr[ 2 ] = 4;
-			need_find_arr[ 3 ] = 5;
-		break;
-		case 4:	//第三行,换第2行,第1行
-			need_find_arr[ 0 ] = 0;
-			need_find_arr[ 1 ] = 1;
-			need_find_arr[ 2 ] = 2;
-			need_find_arr[ 3 ] = 3;
-		break;
-	}
-	int i, re = 0;
-	for ( i = 0; i < SIDE_MEMBER - 2; ++i )
-	{
-		if ( NULL != aim_member[ need_find_arr[ i ] ] && is_live( aim_member[ need_find_arr[ i ] ] ) )
+		beg_pos = line * 3;
+		for ( i = beg_pos; i < beg_pos + 3; ++i )
 		{
-			re = need_find_arr[ i ];
-			break;
+			if ( NULL == aim_member[ i ] || is_dead( aim_member[ i ] ) )
+			{
+				continue;
+			}
+			return i;
+		}
+		line -= find_direct;
+		if ( line < 0 )
+		{
+			line = 2;
 		}
 	}
-	return re;
-}
-
-/**
- * 产生范围从x 到 y的随机数
- * @param	x				起始值
- * @param	y				结束值
- */
-int yile_rand( int x, int y )
-{
-	//如果 x 大于 y 交换值
-	if ( x > y )
-	{
-		int z = y;
-		y = x;
-		x = z;
-	}
-	return rand() % ( y - x + 1 ) + x;
+	return -1;
 }
 
 /**
@@ -1157,7 +1195,7 @@ int is_rand( int prob )
 	{
 		return 1;
 	}
-	return prob <= yile_rand( 1, 100 );
+	return prob <= first_rand( 1, 100 );
 }
 
 
@@ -1170,12 +1208,27 @@ int skill_formula( int formula_id, fight_unit_t *attack )
 {
 	if ( formula_id < 0 || formula_id > SKILL_FORMULA_NUM )
 	{
-		#ifdef YILE_DEBUG
+		#ifdef FIRST_DEBUG
 		printf( RED_FONT( "！！！！！！技能公式: %d 不存在！！！！！！\n" ), formula_id );
 		#endif
 		return 0;
 	}
 	return skill_formula_arr[ formula_id ]( attack );
+}
+
+/**
+ * 改变斗气值
+ * @param	member			战斗成员
+ * @param	value			改变值
+ * @param	combat_info		战斗信息
+ */
+void change_vigour_value( fight_unit_t *member, int value, combat_info_t *combat_info )
+{
+	member->vigour_now += value;
+	if ( member->vigour_now > member->vigour_max )
+	{
+		member->vigour_now = member->vigour_max;
+	}
 }
 
 /**
@@ -1191,11 +1244,6 @@ void change_anger_value( fight_unit_t *member, int value, combat_info_t *combat_
 	if ( new_anger < 0 )
 	{
 		new_anger = 0;
-	}
-	//不能超过最大值
-	else if ( new_anger > member->anger_max )
-	{
-		new_anger = member->anger_max;
 	}
 
 	//怒气真实改变
@@ -1223,12 +1271,12 @@ int change_life_value( fight_unit_t *member, int damage_type, int value, combat_
 {
 	if ( is_dead( member ) )
 	{
-		#ifdef YILE_DEBUG
+		#ifdef FIRST_DEBUG
 		printf( "\n成员:" CYAN_FONT( "%d_%d" ) " 已经死亡！", member->side, member->cell_id );
 		#endif
 		return;
 	}
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	printf( "\n成员:" CYAN_FONT( "%d_%d" ) " 气血改变:", member->side, member->cell_id );
 	debug_change_value( value * -1, "" );
 	printf( " 改变原因: " );
@@ -1237,7 +1285,7 @@ int change_life_value( fight_unit_t *member, int damage_type, int value, combat_
 	{
 		case DAMAGE_ATTACK:			//攻击造成伤害
 		{
-			#ifdef YILE_DEBUG
+			#ifdef FIRST_DEBUG
 			printf( CYAN_FONT( "「攻击伤害」" ) );
 			#endif
 			if ( 0 != member->append_harm )
@@ -1247,7 +1295,7 @@ int change_life_value( fight_unit_t *member, int damage_type, int value, combat_
 				{
 					value = 1;
 				}
-				#ifdef YILE_DEBUG
+				#ifdef FIRST_DEBUG
 				printf( " 伤害加深" RED_FONT( "%d" ), member->append_harm );
 				#endif
 			}
@@ -1255,7 +1303,7 @@ int change_life_value( fight_unit_t *member, int damage_type, int value, combat_
 		}
 		case DAMAGE_RETURN:			//伤害反弹
 		{
-			#ifdef YILE_DEBUG
+			#ifdef FIRST_DEBUG
 			printf( CYAN_FONT( "「伤害反弹」" ) );
 			#endif
 			if ( 0 != member->append_harm )
@@ -1265,13 +1313,13 @@ int change_life_value( fight_unit_t *member, int damage_type, int value, combat_
 				{
 					value = 1;
 				}
-				#ifdef YILE_DEBUG
+				#ifdef FIRST_DEBUG
 				printf( " 伤害加深" RED_FONT( "%d" ), member->append_harm );
 				#endif
 			}
 			break;
 		}
-		#ifdef YILE_DEBUG
+		#ifdef FIRST_DEBUG
 		case DAMAGE_SUCK:			//吸血
 			printf( CYAN_FONT( "「吸血」" ) );
 		break;
@@ -1280,7 +1328,7 @@ int change_life_value( fight_unit_t *member, int damage_type, int value, combat_
 		break;
 		#endif
 	}
-	member->life_now -= value;
+	member->life_now += value;
 	//如果是气血增加 不能超过life_max
 	if ( value < 0 && member->life_now > member->life_max )
 	{
@@ -1304,7 +1352,7 @@ int change_life_value( fight_unit_t *member, int damage_type, int value, combat_
 		push_result_life_change( result_pack_life_l_t, RESULT_DAMAGE_L );
 	}
 
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	printf( " 实际改变: " );
 	debug_change_value( value * -1, "" );
 	printf( " 剩余气血: " YELLOW_FONT( "%d\n" ), member->life_now );
@@ -1313,7 +1361,7 @@ int change_life_value( fight_unit_t *member, int damage_type, int value, combat_
 	//死亡
 	if ( member->life_now <= 0 )
 	{
-		#ifdef YILE_DEBUG
+		#ifdef FIRST_DEBUG
 		printf( CYAN_FONT( "【成员死亡】\n" ) );
 		#endif
 		real_change_value -= member->life_now;
@@ -1343,169 +1391,78 @@ int change_life_value( fight_unit_t *member, int damage_type, int value, combat_
  * 普通攻击伤害值
  * @param	attack_member	攻击者
  * @param	aim_member		受伤者
- * @param	attack_type		攻击类型
  * @param	combat_info		战斗数据
  */
-void normal_attack( fight_unit_t *attack_member, fight_unit_t *aim_member, int attack_type, combat_info_t *combat_info )
+void normal_attack( fight_unit_t *attack_member, fight_unit_t *aim_member, combat_info_t *combat_info )
 {
-	//基础攻击
-	int base_attack = yile_rand( attack_member->attack_min, attack_member->attack_max );
-	#ifdef YILE_DEBUG
-	printf( "\n基础攻击力:" GREEN_FONT( " %d" ), base_attack );
-	#endif
-	//状态附加
-	if ( 0 != attack_member->buff_attack )
-	{
-		#ifdef YILE_DEBUG
-		printf( " 状态附加:" GREEN_FONT( " %d" ), attack_member->buff_attack );
-		#endif
-		base_attack += attack_member->buff_attack;
-	}
-	//当下附加
-	if ( 0 != attack_member->once_effect.attack )
-	{
-		#ifdef YILE_DEBUG
-		printf( " 当下效果附加:" GREEN_FONT( " %d" ), attack_member->once_effect.attack );
-		#endif
-		base_attack += attack_member->once_effect.attack;
-	}
+	//本次攻击产生的真实伤害
+	int realy_damage;
 
-	//武力 或 智力加成
-	int member_force = get_fight_force( attack_member );
-	int member_IQ = get_fight_IQ( attack_member );
-	float attack_add_rate;
-	if ( ATTACK_PHYSICS == attack_type )
+	//随机攻击力
+	int rand_damage = first_rand( attack_member->attack_min, attack_member->attack_max );
+	//附加攻击力
+	int base_damage = rand_damage + attack_member->buff_attack + attack_member->once_effect.attack;
+	//攻击力加成（当下攻击力加成 和 状态产生的攻击力加成 ）
+	int tmp_damage_add = attack_member->buff_attack_rate + attack_member->once_effect.attack_rate;
+	if ( 0 != tmp_damage_add )
 	{
-		//物理攻击方式
-		attack_add_rate = 1.0 + (float)member_force * ATTACK_PHYSICS_RATE;
-		#ifdef YILE_DEBUG
-		printf( " 物理攻击 武力加成:" );
-		#endif
+		base_damage = ceil( base_damage * ( 1.00 + (float)tmp_damage_add / 100 ) );
 	}
-	else
-	{
-		//法术攻击方式
-		attack_add_rate = 1.0 + (float)member_IQ * ATTACK_MAGIC_RATE;
-		#ifdef YILE_DEBUG
-		printf( " 法术攻击 智力加成:" );
-		#endif
-	}
-	#ifdef YILE_DEBUG
-	printf( GREEN_FONT( " %f" ), attack_add_rate );
-	#endif
-	//状态或者当下的攻击加成
-	if ( 0 != attack_member->once_effect.attack_rate || 0 != attack_member->buff_attack_rate )
-	{
-		#ifdef YILE_DEBUG
-		printf( " 状态加成:" GREEN_FONT( " %d%%" ) " 当下加成:" GREEN_FONT( " %d%%"), attack_member->buff_attack_rate, attack_member->once_effect.attack_rate );
-		#endif
-		attack_add_rate += (float)( attack_member->once_effect.attack_rate + attack_member->buff_attack_rate ) / 100;
-	}
-
-	base_attack *= attack_add_rate;
-
-	//防御力
-	int defence = aim_member->defence;
-	#ifdef YILE_DEBUG
-	printf( " 对手防御力:" YELLOW_FONT( " %d" ), defence );
-	#endif
-	if ( 0 != aim_member->defence_rate )
-	{
-		#ifdef YILE_DEBUG
-		printf( " 防御力加成:" YELLOW_FONT( " %d" ), aim_member->defence_rate );
-		#endif
-		defence = floor( (float)( defence * ( 100 + aim_member->defence_rate ) ) / 100 );
-	}
-
-	base_attack -= defence;
-
-	#ifdef YILE_DEBUG
-	printf( " 伤害:" GREEN_FONT( " %d" ), base_attack );
-	#endif
-
 	//暴击判断
-	int dead_strick = attack_member->deadly_strike - aim_member->avoid_ds;
-	if ( 0 != attack_member->once_effect.ds )
+	if ( is_rand( get_ds_rate( attack_member, aim_member ) ) )
 	{
-		dead_strick += attack_member->once_effect.ds;
-	}
-	#ifdef YILE_DEBUG
-	printf( " 暴击率:" GREEN_FONT( " %d" ) " 当下加成:" GREEN_FONT( " %d" ) " 免暴率:" YELLOW_FONT( " %d" ), attack_member->deadly_strike, attack_member->once_effect.ds, aim_member->avoid_ds );
-	#endif
-	attack_add_rate = 1.0;
-	//是否发生暴击
-	if ( is_rand( dead_strick ) )
-	{
-		#ifdef YILE_DEBUG
-		printf( CYAN_FONT( " 【暴击】" ) );
-		#endif
-		//暴击输出结果
-		result_pack_ds_t pack_ds;
-		pack_ds.pack_id = RESULT_MEMBER_DS;
-		pack_ds.index_id = attack_member->index;
-		push_fight_result( combat_info, &pack_ds, sizeof( result_pack_ds_t ) );
-
-		//小优化 如果没有伤害加成变更,以默认值 1.5 计算
-		if ( 0 == attack_member->ds_damage && 0 == attack_member->once_effect.ds_damage )
+		//如果暴击后会有附加状态
+		if ( NULL != attack_member->ds_ext_buff )
 		{
-			attack_add_rate = 1.5;	//默认暴击伤害
+			//direct_extend_effect( aim_member, attack_member->ds_ext_buff, 0, combat_info );
 		}
-		else
+		//暴击伤害（要加上 暴击伤害加成、当下暴击伤害加成）
+		base_damage = get_ds_damage( base_damage, attack_member->ds_damage + attack_member->once_effect.ds_damage, aim_member->tenacity );
+	}
+	//调用被攻击方承受伤害方法，返回值realy_damage 为真实伤害到的气血
+	realy_damage = change_life_value( aim_member, DAMAGE_ATTACK, base_damage, combat_info );
+
+	//如果我还活着（有可能在之前已经被反弹死了），我要吸血！！
+	if ( is_live( attack_member ) && ( attack_member->suck > 0 || attack_member->once_effect.suck > 0 ) )
+	{
+		int tmp_suck = attack_member->suck;
+		if ( attack_member->once_effect.suck > 0 )
 		{
-			attack_add_rate = (float)( 150 + attack_member->ds_damage + attack_member->once_effect.ds_damage ) / 100;
+			tmp_suck += attack_member->once_effect.suck;
+		}
+		//吸血
+		int suck_life = ceil( (float)( realy_damage * tmp_suck ) / 100 );
+		change_life_value( attack_member, DAMAGE_SUCK, suck_life, combat_info );
+	}
+
+	//如果双方都还活着
+	if ( is_live( attack_member ) && is_live( aim_member ) )
+	{
+		//如果被攻击方有反弹，计算伤害反弹
+		if ( aim_member->damage_return > 0 )
+		{
+			//伤害反弹
+			int return_life = ceil( (float)(realy_damage * aim_member->damage_return ) / 100 );
+			change_life_value( attack_member, DAMAGE_RETURN, return_life, combat_info );
+		}
+		//如果被攻击方有被攻击是的效果
+		if ( NULL != aim_member->damage_ext_eff )
+		{
+			direct_extend_effect( aim_member, aim_member->damage_ext_eff, 0, combat_info );
+		}
+		//碾压率
+		if ( is_rand( attack_member->press_ration + attack_member->once_effect.press ) )
+		{
+			//输出结果 todo
+
+			//判断是否碾压无效
+			if ( 0 == aim_member->avoid_press )
+			{
+				int damage = attack_press_damage( aim_member->life_now );
+				change_life_value( aim_member, DAMAGE_PRESS, damage, combat_info );
+			}
 		}
 	}
-
-	int attack_type_add = ATTACK_PHYSICS == attack_type ? member_force : member_IQ;
-	attack_add_rate += (float)attack_type_add / ( attack_type_add + 85 );
-
-	//伤害减免
-	if ( 0 != aim_member->avoid_harm )
-	{
-		#ifdef YILE_DEBUG
-		printf( " 伤害减免:" YELLOW_FONT( " %d%%" ), aim_member->avoid_harm );
-		#endif
-		attack_add_rate += (float)aim_member->avoid_harm / 100;
-	}
-
-	int damage = base_attack * attack_add_rate;
-	//最低伤害  -1
-	if ( damage < 1 )
-	{
-		damage = 1;
-	}
-	#ifdef YILE_DEBUG
-	printf( " 最终伤害:" GREEN_FONT( " %d * %f = %d" ), base_attack, attack_add_rate, damage );
-	#endif
-
-	//新的damage为真实受到的伤害
-	damage = change_life_value( aim_member, DAMAGE_ATTACK, damage, combat_info );
-	#ifdef YILE_DEBUG
-	printf( "实际攻击伤害: " RED_FONT( "%d " ), damage );
-	#endif
-	//伤害反弹计算
-	if ( is_live( aim_member ) && aim_member->damage_return > 0 )
-	{
-		int damage_return = ceil( (float)( damage * aim_member->damage_return ) / 100 );
-		#ifdef YILE_DEBUG
-		printf( "伤害反弹率 " RED_FONT( "%d%%" ) " 实际反弹值: " RED_FONT( "%d " ), aim_member->damage_return, damage_return );
-		#endif
-		change_life_value( attack_member, DAMAGE_RETURN, damage_return, combat_info );
-	}
-
-	//吸血计算
-	if ( is_live( attack_member ) && attack_member->suck > 0 )
-	{
-		int suck = ceil( (float)( damage * attack_member->suck ) / 100 );
-		#ifdef YILE_DEBUG
-		printf( "吸血率 " GREEN_FONT( "%d%%" ) " 实际吸血值: " GREEN_FONT( "%d " ), attack_member->suck, suck );
-		#endif
-		//吸血需要乘以-1
-		change_life_value( attack_member, DAMAGE_SUCK, suck * -1, combat_info );
-	}
-	#ifdef YILE_DEBUG
-	printf( "\n" );
-	#endif
 }
 
 /**
@@ -1522,17 +1479,9 @@ void join_member( fight_unit_t *member, combat_info_t *combat_info )
 	{
 		combat_info->is_over = 0;
 	}
-	int attack_sequence[ 6 ] = {1, 5, 5, 9, 3, 7 };
-	int defence_sequence[ 6 ] = {4, 10, 2, 8, 6, 12 };
-	if ( 0 == member->side )
-	{
-		member->attack_time = attack_sequence[ member->cell_id ];
-	}
-	else
-	{
-		member->attack_time = defence_sequence[ member->cell_id ];
-	}
-	#ifdef YILE_DEBUG
+	//确定出手时间
+	member->next_round = combat_info->second + member->base_speed;
+	#ifdef FIRST_DEBUG
 	printf( "第 " GREEN_FONT( "%d" ) " 秒", combat_info->second );
 	debug_attack_side( member->side, "" );
 	printf( "加入成员 格子:%d\n", member->cell_id );
@@ -1553,7 +1502,6 @@ void join_member( fight_unit_t *member, combat_info_t *combat_info )
 	join_pack.index_id = member->index;
 	join_pack.side = member->side;
 	join_pack.cell_id = member->cell_id;
-	join_pack.anger_max = member->anger_max;
 	join_pack.life_max = member->life_max;
 	join_pack.swf_id = member->swf_id;
 	memcpy( &join_pack.name, member->name, MEMBER_NAME_LEN );
@@ -1562,7 +1510,7 @@ void join_member( fight_unit_t *member, combat_info_t *combat_info )
 	//初始化时的额外效果
 	if ( NULL != member->init_effect )
 	{
-		#ifdef YILE_DEBUG
+		#ifdef FIRST_DEBUG
 		printf( GREEN_FONT( "\t〖效果〗" )"进入战斗的效果 " );
 		#endif
 		direct_extend_effect( member, member->init_effect, 0, combat_info );
@@ -1583,7 +1531,7 @@ void fight_dot_life( fight_unit_t *member_list[], combat_info_t *combat_info )
 	{
 		if ( NULL != member_list[ i ] && member_list[ i ]->dot_life != 0 )
 		{
-			change_life_value( member_list[ i ], DAMAGE_DOT, member_list[ i ]->dot_life, combat_info );
+		//	change_life_value( member_list[ i ], DAMAGE_DOT, member_list[ i ]->dot_life, combat_info );
 		}
 	}
 }
@@ -1755,13 +1703,13 @@ void fight_final_end( combat_info_t *combat_info )
 /**
  * 初始化游戏属性
  */
-void init_yile_fight()
+void init_first_fight()
 {
 	//申请技能指针数组空间
 	GLOBAL_VARS.skill_info_pool = ( skill_t** )malloc( sizeof( skill_t ) * DEF_SKILL_NUM );
 	//申请状态指针数组空间
 	GLOBAL_VARS.buff_info_pool = ( buff_t** )malloc( sizeof( buff_t ) * DEF_SKILL_BUFF_NUM );
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	DEBUG_BUFF_NAME = (char **)malloc( sizeof( char*  ) * DEF_SKILL_BUFF_NUM );
 	DEBUG_SKILL_NAME = (skill_name_t **)malloc( sizeof( skill_name_t* ) * DEF_SKILL_NUM );
 	#endif
@@ -1834,7 +1782,7 @@ buff_t *find_buff_info( int buff_id )
  */
 sk_effect_t *read_fight_config_effect( FILE *config_file, int read_num, int *is_error )
 {
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	printf( "读取效果: %d 个\n", read_num );
 	#endif
 	sk_effect_t *result_head = NULL;
@@ -1866,7 +1814,7 @@ sk_effect_t *read_fight_config_effect( FILE *config_file, int read_num, int *is_
  */
 sk_buff_t *read_fight_config_buff( FILE *config_file, int read_num, int *is_error )
 {
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	printf( "读取状态: %d 个\n", read_num );
 	#endif
 	sk_buff_t *result_head = NULL;
@@ -1905,7 +1853,7 @@ int read_fight_config_dat_file( char *file_path )
 	uint16_t skill_num = -1;
 	int read_ret = fread( &buff_num, sizeof( buff_num ), 1, config_file );
 	check_read_ret( read_ret );
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	printf( "技能状态个数: %d \n", buff_num );
 	#endif
 	while ( buff_num > 0 )
@@ -1924,14 +1872,14 @@ int read_fight_config_dat_file( char *file_path )
 		{
 			return -3;
 		}
-		#ifdef YILE_DEBUG
+		#ifdef FIRST_DEBUG
 		printf( "新状态 ID:%d\n", tmp_read_buff.buff_id );
 		#endif
 		GLOBAL_VARS.buff_info_pool[ tmp_read_buff.buff_id ] = new_buff;
 	}
 	read_ret = fread( &skill_num, sizeof( skill_num ), 1, config_file );
 	check_read_ret( read_ret );
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	printf( "技能个数: %d \n", skill_num );
 	#endif
 	while ( skill_num > 0 )
@@ -1942,12 +1890,11 @@ int read_fight_config_dat_file( char *file_path )
 		check_read_ret( read_ret );
 		skill_t *new_skill = ( skill_t* )malloc( sizeof( skill_t ) );
 		new_skill->skill_id = tmp_read_skill.skill_id;
-		new_skill->self_hit_rating[ 0 ] = tmp_read_skill.self_hr_type;
-		new_skill->self_hit_rating[ 1 ] = tmp_read_skill.self_hr;
-		new_skill->object_hit_rating[ 0 ] = tmp_read_skill.object_hr_type;
-		new_skill->object_hit_rating[ 1 ] = tmp_read_skill.object_hr;
+		new_skill->self_hit_ration[ 0 ] = tmp_read_skill.self_hr_type;
+		new_skill->self_hit_ration[ 1 ] = tmp_read_skill.self_hr;
+		new_skill->object_hit_ration[ 0 ] = tmp_read_skill.object_hr_type;
+		new_skill->object_hit_ration[ 1 ] = tmp_read_skill.object_hr;
 		new_skill->attack_num = tmp_read_skill.attack_num;
-		new_skill->attack_type = tmp_read_skill.attack_type;
 		new_skill->object_aim = tmp_read_skill.object_aim;
 		new_skill->self_aim = tmp_read_skill.self_aim;
 		int is_error = 0;
@@ -1994,7 +1941,7 @@ void parse_skill_use_str( fight_unit_t *member, combat_info_t *combat_info, char
 	memcpy( tmp_use_skill_char, use_str, str_len );
 	tmp_use_skill_char[ str_len ] = '\0';
 	int use_arr[ 4 ];
-	if ( 3 == fight_split_str( tmp_use_skill_char, str_len, ':', use_arr, 3 ) )
+	/*if ( 3 == fight_split_str( tmp_use_skill_char, str_len, ':', use_arr, 3 ) )
 	{
 		skill_t *skill_info = find_skill_info( use_arr[ 0 ] );
 		if ( NULL == skill_info )
@@ -2008,7 +1955,7 @@ void parse_skill_use_str( fight_unit_t *member, combat_info_t *combat_info, char
 		use_sk->use_anger = use_arr[ 2 ];
 		use_sk->add_hr = use_arr[ 3 ];
 		member->anger_skill = use_sk;
-	}
+	}*/
 }
 
 /**
@@ -2211,3 +2158,4 @@ void push_change_team_result( combat_info_t *combat_info, int side, int team_id 
 	pack_team.team_id = team_id;
 	push_fight_result( combat_info, &pack_team, sizeof( result_pack_new_team_t ) );
 }
+

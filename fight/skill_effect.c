@@ -104,7 +104,7 @@ void skill_effect_5( fight_unit_t *aim_member, int effect_value, int effect_do_t
 	}
 	else
 	{
-		aim_member->hit_rating += effect_value;
+		aim_member->hit_ration += effect_value;
 	}
 }
 
@@ -141,7 +141,7 @@ void skill_effect_7( fight_unit_t *aim_member, int effect_value, int effect_do_t
 	}
 	else
 	{
-		aim_member->deadly_strike += effect_value;
+		aim_member->ds_ration += effect_value;
 	}
 }
 
@@ -157,7 +157,7 @@ void skill_effect_8( fight_unit_t *aim_member, int effect_value, int effect_do_t
 	}
 	if ( EFFECT_MANY == effect_type )
 	{
-		aim_member->avoid_ds += effect_value;
+		//aim_member->avoid_ds += effect_value;
 	}
 }
 
@@ -390,11 +390,11 @@ void skill_effect_24( fight_unit_t *aim_member, int effect_value, int effect_do_
 	//当下效果
 	if ( EFFECT_ONCE == effect_type  )
 	{
-		aim_member->once_effect.force += effect_value;
+		//aim_member->once_effect.force += effect_value;
 	}
 	else
 	{
-		aim_member->force += effect_value;
+		//aim_member->force += effect_value;
 	}
 }
 
@@ -411,11 +411,11 @@ void skill_effect_25( fight_unit_t *aim_member, int effect_value, int effect_do_
 	//当下效果
 	if ( EFFECT_ONCE == effect_type  )
 	{
-		aim_member->once_effect.IQ += effect_value;
+		//aim_member->once_effect.IQ += effect_value;
 	}
 	else
 	{
-		aim_member->IQ += effect_value;
+		//aim_member->IQ += effect_value;
 	}
 }
 

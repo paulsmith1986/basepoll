@@ -1,7 +1,7 @@
-#ifndef YILE_FIGHT_EFFECT_H
-#define YILE_FIGHT_EFFECT_H
+#ifndef FIRST_FIGHT_EFFECT_H
+#define FIRST_FIGHT_EFFECT_H
 #define SKILL_EFFECT_NUM 25					//技能效果的个数
-#include "yile_fight.h"
+#include "first_fight.h"
 //所有效果集合
 void ( *skill_effect_arr[ SKILL_EFFECT_NUM + 1 ] )( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info );
 

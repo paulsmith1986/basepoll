@@ -1,7 +1,7 @@
-#ifndef YILE_FIGHT_STRUCT_POOL_H
-#define YILE_FIGHT_STRUCT_POOL_H
+#ifndef FIRST_FIGHT_STRUCT_POOL_H
+#define FIRST_FIGHT_STRUCT_POOL_H
 #include <stdlib.h>
-#include "yile_fight.h"
+#include "first_fight.h"
 /**
  * 新创建一个fight-buff
  * @param	combat_info		战斗信息

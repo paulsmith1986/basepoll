@@ -1,6 +1,6 @@
-#ifndef YILE_NEW_FIGHT_PROTOCOL_H
-#define YILE_NEW_FIGHT_PROTOCOL_H
-#include "yile_fight.h"
+#ifndef FIRST_NEW_FIGHT_PROTOCOL_H
+#define FIRST_NEW_FIGHT_PROTOCOL_H
+#include "first_fight.h"
 #pragma pack(1)
 
 #define			RESULT_NEW_SEC				1			//每一秒开始

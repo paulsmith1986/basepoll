@@ -1,31 +1,31 @@
-#ifndef YILE_NEW_FIGHT_DEBUG_H
-#define YILE_NEW_FIGHT_DEBUG_H
+#ifndef FIRST_NEW_FIGHT_DEBUG_H
+#define FIRST_NEW_FIGHT_DEBUG_H
 
 //调试模式需要用到的一些宏
-#ifdef YILE_DEBUG
+#ifdef FIRST_DEBUG
 	#ifndef HTML_DEBUG
-		#define YILE_RED "\033[0;32;31m"
-		#define YILE_GREEN "\033[0;32;32m"
-		#define YILE_BLUE "\033[0;32;34m"
-		#define YILE_CYAN "\033[0;32;36m"
-		#define YILE_YELLOW "\033[0;32;33m"
-		#define YILE_PINK "\033[0;32;35m"
-		#define YILE_COLOR_END "\033[m"
+		#define FIRST_RED "\033[0;32;31m"
+		#define FIRST_GREEN "\033[0;32;32m"
+		#define FIRST_BLUE "\033[0;32;34m"
+		#define FIRST_CYAN "\033[0;32;36m"
+		#define FIRST_YELLOW "\033[0;32;33m"
+		#define FIRST_PINK "\033[0;32;35m"
+		#define FIRST_COLOR_END "\033[m"
 	#else
-		#define YILE_RED "<font color=\"red\">"
-		#define YILE_GREEN "<font color=\"green\">"
-		#define YILE_BLUE "<font color=\"blue\">"
-		#define YILE_CYAN "<font color=\"cyan\">"
-		#define YILE_YELLOW "<font color=\"yellow\">"
-		#define YILE_PINK "<font color=\"magenta\">"
-		#define YILE_COLOR_END "</font>"
+		#define FIRST_RED "<font color=\"red\">"
+		#define FIRST_GREEN "<font color=\"green\">"
+		#define FIRST_BLUE "<font color=\"blue\">"
+		#define FIRST_CYAN "<font color=\"cyan\">"
+		#define FIRST_YELLOW "<font color=\"yellow\">"
+		#define FIRST_PINK "<font color=\"magenta\">"
+		#define FIRST_COLOR_END "</font>"
 	#endif
-	#define RED_FONT( format ) YILE_RED format YILE_COLOR_END
-	#define GREEN_FONT( format ) YILE_GREEN format YILE_COLOR_END
-	#define CYAN_FONT( format ) YILE_CYAN format YILE_COLOR_END
-	#define BLUE_FONT( format ) YILE_BLUE format YILE_COLOR_END
-	#define YELLOW_FONT( format ) YILE_YELLOW format YILE_COLOR_END
-	#define PINK_FONT( format ) YILE_PINK format YILE_COLOR_END
+	#define RED_FONT( format ) FIRST_RED format FIRST_COLOR_END
+	#define GREEN_FONT( format ) FIRST_GREEN format FIRST_COLOR_END
+	#define CYAN_FONT( format ) FIRST_CYAN format FIRST_COLOR_END
+	#define BLUE_FONT( format ) FIRST_BLUE format FIRST_COLOR_END
+	#define YELLOW_FONT( format ) FIRST_YELLOW format FIRST_COLOR_END
+	#define PINK_FONT( format ) FIRST_PINK format FIRST_COLOR_END
 	#define debug_attack_side( side, end_char ) ATTACK_SIDE == side ? printf( GREEN_FONT( "【攻击方】" ) end_char ) : printf( CYAN_FONT( "【防守方】" end_char ) )
 	#define debug_attack_type( type, end_char ) ATTACK_PHYSICS == type ? printf( CYAN_FONT( "【物理攻击】" ) end_char ) : printf( CYAN_FONT( "【法术攻击】" end_char ) )
 	#define debug_change_value( value, end_char ) value > 0 ? printf( GREEN_FONT( "+%d" ) end_char, value ) : printf( RED_FONT( "%d" ) end_char, value )
@@ -111,7 +111,7 @@
 			uint16_t buff_id;
 			int read_ret = fread( &buff_id, sizeof( buff_id ), 1, config_file );
 			check_read_ret( read_ret );
-			#ifdef YILE_DEBUG
+			#ifdef FIRST_DEBUG
 			printf( "查找状态 ID:%d\n", buff_id );
 			#endif
 			buff_t *buff_info = find_buff_info( buff_id );
