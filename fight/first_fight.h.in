@@ -1,0 +1,719 @@
+#ifndef YILE_NEW_FIGHT_H
+#define YILE_NEW_FIGHT_H
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include "init_define.h"
+#include "init_tool.h"
+
+#define		YILE_FIGHT_VERSION		"{$yile_version}"
+#define		YILE_SWITCH_DEBUG
+
+#define		ATTACK_SIDE				0			//攻击方
+#define		DEFENCE_SIDE			1			//防守方
+#define		SIDE_MEMBER				6			//每一方的战斗人数
+#define		FIGHT_INTERVAL			10			//出手间隔
+#define		FIGHT_RESULT_CHAR		32768		//战斗结果缓存大小
+#define		EFFECT_ADD				1			//效果生效
+#define		EFFECT_CLEAN			0			//效果失效
+#define		EFFECT_ONCE				1			//单次效果
+#define		EFFECT_MANY				2			//持续效果
+#define		MEMBER_NAME_LEN			20			//成员名称最长
+
+#define		REMOVE_BUFF_ONE			1			//移除指定的buff
+#define		REMOVE_BUFF_EXPIRE		2			//移除过期的buff
+#define		REMOVE_BUFF_ALL			3			//移除全部的buff
+#define		REMOVE_BUFF_BAD			4			//移除全部的负面buff
+#define		REMOVE_BUFF_GOOD		5			//移除全部的正面buff
+
+#define		DAMAGE_ATTACK			1			//攻击造成伤害
+#define		DAMAGE_SKILL			2			//技能效果直接造成伤害
+#define		DAMAGE_RETURN			3			//伤害反弹
+#define		DAMAGE_SUCK				4			//吸血
+#define		DAMAGE_DOT				5			//DOT伤害
+
+#define		ANGER_ADD_NUM			5			//通常的怒气增加量
+#define		MIN_NEXT_ATTACK_TIME	3			//最短的下次出手间隔
+
+#define		ATTACK_PHYSICS			0			//物理攻击
+#define		ATTACK_PHYSICS_RATE		0.02		//物理攻击系数
+#define		ATTACK_MAGIC			1			//法术攻击
+#define		ATTACK_MAGIC_RATE		0.01		//法术攻击系数
+
+#define		AIM_DIRECT				0			//直接目标
+#define		AIM_INDIRECT			1			//间接目标
+#define		AIM_EXCEPT_DIRECT		2			//间接目标(不含直接目标)
+
+#define		ATTACK_TYPE_ONE			0			//单体攻击
+#define		ATTACK_TYPE_ROW			1			//横排攻击
+#define		ATTACK_TYPE_COL			2			//纵排攻击
+#define		ATTACK_TYPE_BESIDE		3			//相邻攻击
+#define		ATTACK_TYPE_ALL			4			//全体攻击
+
+#define		PARSE_STR_CHAR_LEN		300			//字符串最大解析的长度
+
+#define		EFFECT_SPECIAL_ID		10			//人物特性，在人物初始化的时候执行
+#define		EFFECT_DS_ID			1			//暴击时的效果
+#define		EFFECT_DAMAGE_ID		3			//被攻击特效
+#define		EFFECT_ATTACK_5			5			//出手时的特效 己方直接目标
+#define		EFFECT_ATTACK_7			7			//出手时的特效 己方间接目标
+#define		EFFECT_ATTACK_9			9			//出手时的特效 己方间接目标(不含直接目标)
+#define		EFFECT_ATTACK_11		11			//出手时的特效 对方直接目标
+#define		EFFECT_ATTACK_13		13			//出手时的特效 对方间接目标
+#define		EFFECT_ATTACK_15		15			//出手时的特效 对方间接目标(不含直接目标)
+
+#define		BUFF_DS_ID				2			//暴击时的状态
+#define		BUFF_DAMAGE_ID			4			//被攻击的状态
+#define		BUFF_ATTACK_6			6			//出手时的状态 己方直接目标
+#define		BUFF_ATTACK_8			8			//出手时的状态 己方间接目标
+#define		BUFF_ATTACK_10			10			//出手时的状态 己方间接目标(不含直接目标)
+#define		BUFF_ATTACK_12			12			//出手时的状态 对方直接目标
+#define		BUFF_ATTACK_14			14			//出手时的状态 对方间接目标
+#define		BUFF_ATTACK_16			16			//出手时的状态 对方间接目标(不含直接目标)
+
+//存战斗结果
+#define push_fight_result( combat_info, data, len )															\
+	if ( combat_info->result_pos + len > combat_info->result_pos_max )										\
+	{																										\
+		char *new_fight_result = ( char* )malloc( combat_info->result_pos_max + FIGHT_RESULT_CHAR );		\
+		memcpy( new_fight_result, combat_info->fight_result, combat_info->result_pos );						\
+		if ( combat_info->is_free_result )																	\
+		{																									\
+			free( combat_info->fight_result );																\
+		}																									\
+		combat_info->fight_result = new_fight_result;														\
+		combat_info->is_free_result = 1;																	\
+	}																										\
+	memcpy( combat_info->fight_result + combat_info->result_pos, data, len );								\
+	combat_info->result_pos += len
+
+//气血改变
+#define push_result_life_change( life_pack_t, the_pack_id )													\
+	life_pack_t life_pack;																					\
+	life_pack.pack_id = the_pack_id;																		\
+	life_pack.index_id = member->index;																		\
+	life_pack.reason = damage_type;																			\
+	life_pack.value = value;																				\
+	push_fight_result( combat_info, &life_pack, sizeof( life_pack_t ) )
+
+//找到某个位置的人
+#define fight_unit_map( side, cell_id )							\
+0 == side ? &(combat_info.atk_member[ cell_id ] ) : &(combat_info.def_member[ cell_id ] )
+
+//找到某个立场的对立面成员列表
+#define	find_oppose_side( side, combat_info, member_list )		\
+	if ( 0 == side )											\
+	{															\
+		member_list = combat_info->def_member;					\
+	}															\
+	else														\
+	{															\
+		member_list = combat_info->atk_member;					\
+	}
+/*一个轮回
+#define next_turn_index( now_turn )								\
+	if ( ++now_turn >= SIDE_MEMBER )							\
+	{															\
+		now_turn = 0;											\
+	}
+*/
+
+#define fight_dr_pack( member )									\
+	result_pack_dr_t pack_dr;									\
+	pack_dr.pack_id = RESULT_MEMBER_DR;							\
+	pack_dr.index_id = member->index;							\
+	push_fight_result( combat_info, &pack_dr, sizeof( result_pack_dr_t ) )
+
+//读文件是否成功
+#define check_read_ret( ret ) if ( 1 != ret ){return -2;}
+
+//是否已经死亡
+#define is_dead( member )	member->life_now <= 0
+
+//是否没有死亡
+#define is_live( member )	member->life_now > 0
+
+//判断是否要对己方作用
+#define is_do_self_side( skill_info, attack_member ) NULL != skill_info->self_buff || NULL != skill_info->self_effect || NULL != attack_member->attack_self_eff[ AIM_DIRECT ] || NULL != attack_member->attack_self_eff[ AIM_INDIRECT ] || NULL != attack_member->attack_self_eff[ AIM_EXCEPT_DIRECT ] || NULL != attack_member->attack_self_buff[ AIM_DIRECT ] || NULL != attack_member->attack_self_buff[ AIM_INDIRECT ] || NULL != attack_member->attack_self_buff[ AIM_EXCEPT_DIRECT ]
+
+//判断是否要攻击对方
+#define is_attack_object( skill_info, attack_member ) skill_info->attack_num > 0 || NULL != skill_info->object_effect || NULL != skill_info->object_buff || NULL != attack_member->attack_object_eff[ AIM_DIRECT ] || NULL != attack_member->attack_object_eff[ AIM_INDIRECT ] || NULL != attack_member->attack_object_eff[ AIM_EXCEPT_DIRECT ] || NULL != attack_member->attack_object_buff[ AIM_DIRECT ] || NULL != attack_member->attack_object_buff[ AIM_INDIRECT ] || NULL != attack_member->attack_object_buff[ AIM_EXCEPT_DIRECT ]
+
+//判断是否额外效果生效
+#define is_effect_take( effect_head ) 0 == effect_head->need_skill || skill_id == effect_head->need_skill
+
+//判断是否额外状态生效
+#define is_buff_take( buff_head ) 0 == buff_head->need_skill || skill_id == buff_head->need_skill
+
+//判断是否使用技能
+#define is_anger_skill_take( member ) NULL != member->anger_skill && 0 == member->no_skill && member->anger_now >= member->anger_skill->use_anger
+
+//获得攻击中的武力值
+#define get_fight_force( member ) ( member->force + member->once_effect.force )
+
+//获得攻击中的智力值
+#define get_fight_IQ( member ) ( member->IQ + member->once_effect.IQ )
+
+//状态效果
+typedef struct sk_effect_t sk_effect_t;
+struct sk_effect_t{
+	int					effect_id;				//效果id
+	int					effect_value_type;		//值类型 0:填写的固定值 1:公式计算
+	int					effect_value;			//值  或者 计算效果值的公式
+	sk_effect_t			*next;					//下一个效果
+};
+
+//状态
+typedef struct buff_t buff_t;
+struct buff_t{
+	int					buff_id;				//状态id;
+	int					buff_type;				//状态类型 1:增益,2:减益
+	int					can_sup;				//是否可以叠加
+	sk_effect_t			*buff_effect;			//状态的效果
+};
+
+//状态和状态持续时间
+typedef struct sk_buff_t sk_buff_t;
+struct sk_buff_t{
+	int					last_time_type;			//持续时间类型 0:固定  1:公式计算
+	int					last_time;				//时间值或者公式ID
+	buff_t				*buff_info;				//状态信息
+	sk_buff_t			*next;					//下一个状态
+};
+
+//技能
+typedef struct skill_t skill_t;
+struct skill_t{
+	int					skill_id;				//技能id
+	int					self_hit_rating[ 2 ];	//自己方的命中率[ 1:人物的命中率 2:填写固定值  3:公式计算, 公式id 或者 值 ]
+	int					object_hit_rating[ 2 ];	//对方的命中率[ 1:人物的命中率 2:填写固定值  3:公式计算, 公式id 或者 值 ]
+	int					attack_num;				//攻击次数
+	int					attack_type;			//攻击类型 1 => 物理攻击 2 => 法术攻击
+	int					object_aim;				//技能作用的范围 0:单体攻击 1:扫荡攻击 2:突进攻击 3:半突击攻击 4:传递攻击 5:全屏攻击
+	int					self_aim;				//技能作用的范围 0:单体攻击 1:扫荡攻击 2:突进攻击 3:半突击攻击 4:传递攻击 5:全屏攻击
+	sk_buff_t			*self_buff;				//技能给自己方的状态
+	sk_buff_t			*object_buff;			//技能给对方的状态
+	sk_effect_t			*self_effect;			//技能给自己的直接效果
+	sk_effect_t			*object_effect;			//技能给对方的直接效果
+	skill_t				*next;
+};
+
+//人物装备的技能信息
+typedef struct use_skill_t use_skill_t;
+struct use_skill_t{
+	int					skill_id;				//技能ID
+	int					skill_level;			//等级
+	int					add_hr;					//命中增加
+	int					use_anger;				//消耗怒气
+	skill_t				*skill_info;			//技能信息
+	use_skill_t			*next;
+};
+
+//当下技能效果，出手后就没有了
+typedef struct effect_once_t effect_once_t;
+struct effect_once_t{
+	int					attack;					//当下攻击力增加 数值
+	int					attack_rate;			//当下攻击力增加百分比（扩大100倍）
+	int					ds;						//当下暴击率增加（扩大100倍）
+	int					ds_damage;				//当下暴伤率增加(扩大100倍)
+	int					hr;						//当下命中率增加（扩大100倍）
+	int					suck;					//当下吸血
+	int					force;					//当下武力值
+	int					IQ;						//当下智力值
+};
+
+//附加效果（被动）
+typedef struct ext_effect_t ext_effect_t;
+
+//附加状态（被动）
+typedef struct ext_buff_t ext_buff_t;
+
+//战斗中的成员
+typedef struct fight_unit_t fight_unit_t;
+
+//战斗中的状态
+typedef struct fight_buff_t fight_buff_t;
+
+struct fight_unit_t{
+	int					index;					//成员ID
+	int					cell_id;				//格子编号
+	int					team_cell_id;			//在小队中的格子编号 比如 0->6->12 表示在同一队中,0号格子有3个人依次出场
+	int					side;					//立场（0：进攻方 1：防守方）
+	int					level;					//等级
+	int					life_max;				//最大气血
+	int					life_now;				//当年气血
+	int					anger_max;				//最大怒气值
+	int					anger_now;				//当前怒气
+	int					hit_rating;				//命中率(扩大100倍)
+	int					dodge_ration;			//躲闪率(扩大100倍)
+	int					deadly_strike;			//暴击率(扩大100倍)
+	int					attack_max;				//最大攻击力
+	int					attack_min;				//最小攻击力
+	int					attack_type;			//攻击类型
+	int					attack_area;			//攻击范围
+	int					ds_damage;				//暴击伤害加成(扩大100倍)
+	int					buff_attack;			//状态的攻击力
+	int					buff_attack_rate;		//状态的攻击力百分比(扩大100倍)
+	int					defence;				//防御力
+	int					defence_rate;			//状态防御力加成比(扩大100倍)
+	int					suck;					//吸血百分比(扩大100倍)
+	int					damage_return;			//伤害反弹(扩大100倍)
+	int					avoid_ds;				//免暴率(扩大100倍)
+	int					avoid_harm;				//免伤率(扩大100倍)
+	int					append_harm;			//伤害加深
+	int					skill_level;			//技能等级(主动技能 或者 被动技能)
+	int					stun;					//眩晕
+	int					no_skill;				//锁穴
+	int					IQ;						//智力
+	int					force;					//武力
+	int					dot_life;				//每秒失血
+	int					attack_num;				//攻击次数
+	int					swf_id;					//模型ID
+	int					attack_time;			//出手的时间点
+	ext_effect_t		*init_effect;			//角色初始化的特效
+	effect_once_t		once_effect;			//当下效果
+	fight_buff_t		*buff_list;				//战斗中的状态列表
+	ext_effect_t		*attack_self_eff[3];	//出手时给己方的额外效果 0 直接目标 1 范围目标 2 范围目标(除直接目标外)
+	ext_buff_t			*attack_self_buff[3];	//出手时给己方的额外状态
+	ext_effect_t		*attack_object_eff[3];	//出手时给对方的额外效果
+	ext_buff_t			*attack_object_buff[3];	//出手时给对方的额外状态
+	ext_effect_t		*damage_ext_eff;		//被攻击时的额外效果
+	ext_buff_t			*damage_ext_buff;		//被攻击时的额外状态
+	ext_effect_t		*ds_ext_effect;			//暴击时的额外效果
+	ext_buff_t			*ds_ext_buff;			//暴击时的额外状态
+	use_skill_t			*anger_skill;			//怒气技能
+	char				name[ MEMBER_NAME_LEN ];//成员名称
+	fight_unit_t		*next;					//用于对象池
+};
+
+//战斗中的状态
+struct fight_buff_t{
+	int					expire;					//过期时间
+	int					level;					//状态等级
+	int					cache_value[ 5 ];		//状态表现出来的值
+	int					by_member_id;			//谁施放的这个效果
+	buff_t				*buff_info;				//状态的基础信息struct
+	fight_buff_t		*next;					//下一个状态
+};
+//附加效果（被动）
+struct ext_effect_t{
+	int					effect_id;				//效果id
+	int					effect_value;			//效果值
+	int					need_skill;				//需要在某个技能触发时才有效
+	ext_effect_t		*next;					//下一个效果
+};
+
+//附加状态（被动）
+struct ext_buff_t{
+	int					level;					//附加状态的等级
+	int					last_time;				//持续时间
+	int					need_skill;				//需要在某个技能触发
+	buff_t				*buff_info;				//状态效果
+	ext_buff_t			*next;					//下一个状态
+};
+
+//动态全局数据
+typedef struct global_t global_t;
+//一场战斗的数据
+typedef struct combat_info_t combat_info_t;
+struct combat_info_t{
+	int					unit_index;				//战斗成员的id索引
+	int					second;					//战斗进行的秒标志
+	int					max_second;				//最大战斗秒数
+	int					side_team[ 2 ];			//双方的队列ID
+	int					side_num[ 2 ];			//双方战斗中的人数
+	int					now_side;				//当前出手方标志
+	int					is_over;				//战斗是否结束
+	int					result_pos;				//存结果的位置
+	int					result_pos_max;			//最大的结果
+	int					is_free_result;			//是否要free战斗结果
+	int					result;					//战斗结果(胜负关系)
+	char				*fight_result;			//战斗结果(播放)
+	fight_unit_t		*atk_member[ SIDE_MEMBER ]; //攻击方的成员(C数据结构)
+	fight_unit_t		*def_member[ SIDE_MEMBER ]; //防守方的成员(C数据结构)
+	global_t			*global_var;			//全局数据
+	void				*ext_data;				//扩展数据
+};
+//动态全局数据
+struct global_t{
+	int					now_ext_buff;			//当前的ext_buff数量
+	int					max_ext_buff;			//最大的ext_buff数量
+	int					now_ext_effect;			//当前的ext_effect数量
+	int					max_ext_effect;			//最大的ext_effect数量
+	int					now_fight_unit;			//当前的fight_unit数量
+	int					max_fight_unit;			//最大的fight_unit数量
+	int					now_fight_buff;			//当前的fight_buff数量
+	int					max_fight_buff;			//最大的fight_buff数量
+	int					now_use_skill;			//当前的use_skill数量
+	int					max_use_skill;			//最大的use_skill数量
+	ext_buff_t			*ext_buff_head;			//ext_buff 头指针
+	ext_effect_t		*ext_effect_head;		//ext_effect 头指针
+	fight_unit_t		*fight_unit_head;		//fight_unit 头指针
+	fight_buff_t		*fight_buff_head;		//fight_buff 头指针
+	use_skill_t			*use_skill_head;		//use_skill 头指针
+};
+
+//静态全局数据
+typedef struct static_global_t static_global_t;
+struct static_global_t{
+	skill_t				**skill_info_pool; //技能信息池
+	buff_t				**buff_info_pool; //状态信息池
+};
+
+//全局静态数据集合
+static_global_t GLOBAL_VARS;
+
+/**
+ * 战斗中的一秒
+ * @param	combat_info		战斗信息
+ */
+void fight_round( combat_info_t *combat_info );
+
+/**
+ * 一次攻击过程
+ * @param	attack_member	战斗成员
+ * @param	combat_info		战斗信息
+ */
+void once_attack( fight_unit_t *attack_member, combat_info_t *combat_info );
+
+/**
+ * 选定技能目标
+ * @param	aim				目标类型
+ * @param	direct_aim		直接目标
+ * @param	aim_list		作用范围目标列表
+ * @param	aim_member		目标成员列表
+ * @return 目标个数
+ */
+int find_indirect_aim( int aim_type, int direct_aim, int aim_list[], fight_unit_t *aim_member[] );
+
+/**
+ * 找到每一个位置的相邻位置
+ * @param	direct_aim		直接目标
+ * @param	aim_list		作用范围目标列表
+ */
+int find_neighbour( int direct_aim, int aim_list[] );
+
+/**
+ * 找到一次出手的直接攻击对象
+ * @param	my_cell			攻击者
+ * @param	aim_member		目标成员列表
+ * @param	find_level		递归防止死循环变量
+ */
+int find_direct_aim( int my_cell, fight_unit_t *aim_member[] );
+
+/**
+ * 产生范围从x 到 y的随机数
+ * @param	x				起始值
+ * @param	y				结束值
+ */
+int yile_rand( int x, int y );
+
+/**
+ * 判断概率事件有没有发生
+ * @param	prob			发生概率
+ */
+int is_rand( int prob );
+
+/**
+ * php端要掉用到的公式统一入口
+ * @param	formula_id		公式ID
+ * @param	attack			战斗成员
+ */
+int skill_formula( int formula_id, fight_unit_t *attack );
+
+/**
+ * 执行一个技能的效果
+ * @param	attack_member	状态来源者
+ * @param	aim_member		状态承受者
+ * @param	buff_head		状态头指针
+ * @param	skill_level		技能等级
+ * @param	combat_info		战斗信息
+ */
+void skill_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_buff_t *buff_head, int skill_level, combat_info_t *combat_info );
+
+/**
+ * 给一个成员加状态
+ * @param	attack_member	状态来源者
+ * @param	aim_member		状态承受者
+ * @param	buff_info		状态信息
+ * @param	skill_level		技能等级
+ * @param	buff_lst_time	持续时间
+ * @param	combat_info		战斗信息
+ */
+void add_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, buff_t *buff_info, int skill_level, int buff_last_time, combat_info_t *combat_info );
+
+/**
+ * 移除指定的状态
+ * @param	member			成员
+ * @param	buff			状态
+ * @param	remove_type		方式 REMOVE_BUFF_ONE:指定 REMOVE_BUFF_EXPIRE:过期 REMOVE_BUFF_ALL:全部 REMOVE_BUFF_BAD:负面 REMOVE_BUFF_GOOD:正面
+ * @param	combat_info		战斗信息
+ */
+void remove_buff( fight_unit_t *member, fight_buff_t *buff, int remove_type, combat_info_t *combat_info );
+
+/**
+ * 清除所有的状态( 不做战斗属性计算 )
+ * @param	member			成员
+ * @param	combat_info		战斗信息
+ */
+void clean_role_buff_list( fight_unit_t *member, combat_info_t *combat_info );
+
+/**
+ * 直接技能效果
+ * @param	attack_member	状态来源者
+ * @param	aim_member		状态承受者
+ * @param	effect_head		效果头指针
+ * @param	combat_info		战斗信息
+ */
+void direct_effect( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_effect_t *effect_head, combat_info_t *combat_info );
+
+/**
+ * 直接被动效果
+ * @param	aim_member		效果承受者
+ * @param	effect_head		效果头指针
+ * @param	skill_id		当前技能ID
+ * @param	combat_info		战斗信息
+ */
+void direct_extend_effect( fight_unit_t *aim_member, ext_effect_t *effect_head, int skill_id, combat_info_t *combat_info );
+
+/**
+ * 被动技能状态
+ * @param	attack_member	状态来源者
+ * @param	aim_member		状态承受者
+ * @param	buff_info		状态的头指针
+ * @param	skill_id		技能等级
+ * @param	combat_info		战斗信息
+ */
+void add_extend_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, ext_buff_t *buff_head, int skill_id, combat_info_t *combat_info );
+
+/**
+ * 状态效果
+ * @param	attack_member	状态来源者
+ * @param	aim_member		状态承受者
+ * @param	effect_head		效果头指针
+ * @param	effect_do_type	效果生效或者失效标志 EFFECT_ADD: 效果生效  EFFECT_CLEAN:效果失效
+ * @param	buff_eff_value	缓存值
+ * @param	combat_info		战斗信息
+ */
+void buff_effect( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_effect_t *effect_head, int effect_do_type, int buff_eff_value[], combat_info_t *combat_info );
+
+/**
+ * 执行效果
+ * @param	aim_member		效果承受者
+ * @param	effect_id		效果ID
+ * @param	effect_value	效果值
+ * @param	effect_do_type	效果生效或者失效标志 EFFECT_ADD: 效果生效  EFFECT_CLEAN:效果失效
+ * @param	effect_type		效果持续类型 EFFECT_ONCE: 单次 EFFECT_MANY: 持续效果
+ * @param	combat_info		战斗信息
+ */
+void do_skill_effect( fight_unit_t *aim_member, int effect_id, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info );
+
+/**
+ * 查看是否拥有相同的状态
+ * @param	buff_id			状态ID
+ * @param	aim_member		状态承受者
+ */
+fight_buff_t *chk_have_buff( fight_unit_t *aim_member, int buff_id );
+
+/**
+ * 获取技能的命中率
+ * @param	hr_type			命中率类型 1:人物的命中率 2:填写固定值  3:公式计算
+ * @param	hr_value		公式ID或者值
+ * @param	attack_member	战斗成员
+ * @param	role_hr			人物的命中率
+ */
+int get_skill_hit_rating( int hr_type, int hr_value, fight_unit_t *attack_member, int role_hr );
+
+/**
+ * 获取普通攻击的命中率
+ * @param	attack_member	攻击者
+ * @param	aim_member		被攻击者
+ */
+int get_hit_rating( fight_unit_t *attack_member, fight_unit_t *aim_member );
+
+/**
+ * 改变怒气值
+ * @param	member			战斗成员
+ * @param	value			改变值
+ * @param	combat_info		战斗信息
+ */
+void change_anger_value( fight_unit_t *member, int value, combat_info_t *combat_info );
+
+/**
+ * 气血值改变
+ * @param	member			战斗成员
+ * @param	damage_type		伤害类型
+ * @param	value			伤害类型
+ * @param	combat_info		战斗信息
+ */
+int change_life_value( fight_unit_t *member, int damage_type, int value, combat_info_t *combat_info );
+
+/**
+ * 一次出手的被动技能效果和状态
+ * @param	attack_member	来源者
+ * @param	aim_member		承受者
+ * @param	is_direct		是否是直接目标
+ * @param	skill_id		技能ID
+ * @param	combat_info		战斗信息
+ */
+void pasv_skill_effect_and_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, int is_direct, int skill_id, combat_info_t *combat_info );
+
+/**
+ * 普通攻击过程
+ * @param	attack_member	攻击者
+ * @param	aim_member		被攻击者
+ * @param	attack_type		攻击类型
+ * @param	combat_info		战斗信息
+ */
+void normal_attack( fight_unit_t *attack_member, fight_unit_t *aim_member, int attack_type, combat_info_t *combat_info );
+
+/**
+ * 加入成员
+ * @param	member			加入者
+ * @param	combat_info		战斗信息
+ */
+void join_member( fight_unit_t *member, combat_info_t *combat_info );
+
+/**
+ * 战斗中的每秒失血
+ * @param	member_list		战斗的一方成员
+ * @param	combat_info		战斗信息
+ */
+void fight_dot_life( fight_unit_t *member_list[], combat_info_t *combat_info );
+
+/**
+ * 战斗中的状态过期
+ * @param	member_list		战斗的一方成员
+ * @param	combat_info		战斗信息
+ */
+void fight_buff_expire( fight_unit_t *member_list[], combat_info_t *combat_info );
+
+/**
+ * 清除一个已经死亡人的信息
+ * @param	member			成员数据
+ * @param	combat_info		战斗信息
+ */
+void clean_member_data( fight_unit_t *member, combat_info_t *combat_info );
+
+/**
+ * 战斗结束
+ * @param	combat_info		战斗信息
+ */
+void fight_final_end( combat_info_t *combat_info );
+
+/**
+ * 初使化全局变量数据
+ * @param	global_var		全局数据
+ */
+void init_global_vars( global_t *global_var );
+
+/**
+ * 初始化游戏属性
+ */
+void init_yile_fight();
+
+/**
+ * 初始化一个技能的属性
+ * @param	skill_t			技能信息
+ */
+void init_skill_info( skill_t *sk_info );
+
+/**
+ * 查找技能信息
+ * @param	skill_id		技能ID
+ */
+skill_t *find_skill_info( int skill_id );
+
+/**
+ * 查找一个信息的数据
+ * @param	buff_id			状态ID
+ */
+buff_t *find_buff_info( int buff_id );
+
+/**
+ * 读取战斗的配置信息
+ * @param	file_path		配置文件路径
+ */
+int read_fight_config_dat_file( char *file_path );
+
+/**
+ * 读取配置文件中的技能效果
+ * @param	config_file		文件句柄
+ * @param	read_num		读取个数
+ * @param	is_error		是否出错的标志
+ */
+sk_effect_t *read_fight_config_effect( FILE *config_file, int read_num, int *is_error );
+
+/**
+ * 读取配置文件中的技能状态
+ * @param	config_file		文件句柄
+ * @param	read_num		读取个数
+ * @param	is_error		是否出错的标志
+ */
+sk_buff_t *read_fight_config_buff( FILE *config_file, int read_num, int *is_error );
+
+/**
+ * 读取字符串
+ */
+char *debug_read_config_name( FILE *config_file, int *is_error );
+
+/**
+ * 成员阵亡的回调函数
+ * @param	combat_info		战斗信息
+ * @param	side			立场
+ * @param	team_cell_id	在小队中的格子编号
+ */
+void member_dead_callback( combat_info_t *combat_info, int side, int team_cell_id );
+
+/**
+ * 尝试切换下一组队员
+ * @param	combat_info		战斗信息
+ */
+void combat_try_change_team( combat_info_t *combat_info );
+
+/**
+ * 解析技能使用字符串
+ * @param	member			战斗成员
+ * @param	combat_info		战斗信息
+ * @param	use_str			使用技能字符串
+ * @param	str_len			字符串长度
+ */
+void parse_skill_use_str( fight_unit_t *member, combat_info_t *combat_info, char *use_str, int str_len );
+
+/**
+ * 切割字符串
+ * @param	sour_str		字符串指针
+ * @param	str_len			字符串长度
+ * @param	split_char		分割字符
+ * @param	arr_str			存结果的数组
+ * @param	split_num		切割次数
+ */
+int fight_split_str( char *str, int str_len, char split_char, int arr_str[], int split_num );
+
+/**
+ * 解析被动技能效果字符串
+ * @param	member			战斗成员
+ * @param	combat_info		战斗信息
+ * @param	use_str			使用技能字符串
+ * @param	str_len			字符串长度
+ */
+void parse_ext_effect_str( fight_unit_t *member, combat_info_t *combat_info, char *use_str, int str_len );
+
+/**
+ * 解析被动技能状态字符串
+ * @param	member			战斗成员
+ * @param	combat_info		战斗信息
+ * @param	use_str			使用技能字符串
+ * @param	str_len			字符串长度
+ */
+void parse_ext_buff_str( fight_unit_t *member, combat_info_t *combat_info, char *use_str, int str_len );
+
+/**
+ * 战斗一方小队变更数据包
+ * @param	combat_info		战斗信息
+ * @param	side			立场
+ * @param	team_id			小队ID
+ */
+void push_change_team_result( combat_info_t *combat_info, int side, int team_id );
+#endif

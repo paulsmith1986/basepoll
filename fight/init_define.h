@@ -1,0 +1,6 @@
+#ifndef YILE_FIGHT_INIT_DEFINE_H
+#define YILE_FIGHT_INIT_DEFINE_H
+#define DEF_SKILL_NUM 2 
+#define DEF_SKILL_BUFF_NUM 4
+#define SKILL_FORMULA_NUM 6
+#endif
