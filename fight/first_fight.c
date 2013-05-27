@@ -202,8 +202,7 @@ void once_round( fight_unit_t *attack_member, combat_info_t *combat_info )
 		vitual_skill.attack_num = 1;
 		vitual_skill.object_aim = 0;
 		vitual_skill.self_aim = 0;
-		vitual_skill.self_hit_ration[ 0 ] = 1;
-		vitual_skill.object_hit_ration[ 0 ] = 1;
+		vitual_skill.hit_ration[ 0 ] = 1;
 		vitual_use_skill.skill_info = &vitual_skill;
 		vitual_use_skill.add_hr = 0;
 		vitual_use_skill.skill_level = 0;
@@ -263,15 +262,9 @@ void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill, combat_in
 			pasv_skill_effect_and_buff( attack_member, aim_member, 0 == aim_id, skill_info->skill_id, combat_info );
 
 			//技能命中率 对己方的默认命中为100
-			int hit_ration = get_skill_hit_ration( skill_info->self_hit_ration[ 0 ], skill_info->self_hit_ration[ 1 ], attack_member, 100 );
-			//技能命中增加
-			if ( 0 != use_skill->add_hr )
-			{
-				#ifdef FIRST_DEBUG
-				printf( " 技能命中率增加：" GREEN_FONT( " %d" ), use_skill->add_hr );
-				#endif
-				hit_ration += use_skill->add_hr;
-			}
+			int hit_ration = 100;
+			//获取对己方的命中率
+			skill_self_hit_ration( attack_member, use_skill, skill_info, hit_ration );
 			if ( !is_rand( hit_ration ) )
 			{
 				#ifdef FIRST_DEBUG
@@ -287,7 +280,7 @@ void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill, combat_in
 			//技能对己方的状态
 			if ( NULL != skill_info->self_buff )
 			{
-				skill_buff( attack_member, aim_member, skill_info->self_buff, use_skill->skill_level, combat_info );
+				skill_buff( attack_member, aim_member, skill_info->self_buff, combat_info );
 			}
 		}
 	}
@@ -334,18 +327,9 @@ void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill, combat_in
 			#ifdef FIRST_DEBUG
 			printf( RED_FONT( "\n【被击】" ) "成员: %d_%d 气血:%d \n\t", aim_member->side, aim_member->cell_id, aim_member->life_now );
 			#endif
-			//小优化..当确定使用人物命中率时才计算普通攻击的命中率
-			int nomal_hr = 1 == skill_info->self_hit_ration[ 0 ] ? get_hit_ration( attack_member, aim_member ) : 0;
 			//本次攻击的命中率
-			int hit_ration = get_skill_hit_ration( skill_info->self_hit_ration[ 0 ], skill_info->self_hit_ration[ 1 ], attack_member, nomal_hr );
-			//技能命中增加
-			if ( 0 != use_skill->add_hr )
-			{
-				#ifdef FIRST_DEBUG
-				printf( " 技能命中率增加：" GREEN_FONT( " %d" ), use_skill->add_hr );
-				#endif
-				hit_ration += use_skill->add_hr;
-			}
+			int hit_ration;
+			skill_object_hit_ration( attack_member, use_skill, skill_info, hit_ration, aim_member );
 			//第一次判断的命中率
 			int is_first_time_hr = is_rand( hit_ration );
 			int is_pasv_effect_done = 0;
@@ -365,7 +349,7 @@ void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill, combat_in
 				//技能对敌方的状态
 				if ( NULL != skill_info->object_buff )
 				{
-					skill_buff( attack_member, aim_member, skill_info->object_buff, use_skill->skill_level, combat_info );
+					skill_buff( attack_member, aim_member, skill_info->object_buff, combat_info );
 				}
 			}
 			//被闪避
@@ -579,81 +563,53 @@ void pasv_skill_effect_and_buff( fight_unit_t *attack_member, fight_unit_t *aim_
 }
 
 /**
- * 获取普通攻击的命中率
- * @param	attack_member	攻击者
- * @param	aim_member		被攻击者
- */
-int get_hit_ration( fight_unit_t *attack_member, fight_unit_t *aim_member )
-{
-	#ifdef FIRST_DEBUG
-	printf( "\n 人物命中率:" GREEN_FONT( " %d " ) " 当下命中率增加:" GREEN_FONT( " %d" ) " 对手闪避率" RED_FONT( " %d" ), 100 + attack_member->hit_ration, attack_member->once_effect.hr, aim_member->dodge_ration );
-	#endif
-	int tmp_hr = ( 100 + attack_member->hit_ration + attack_member->once_effect.hr ) - ( aim_member->dodge_ration ) ;
-	if ( tmp_hr < 5 )
-	{
-		tmp_hr = 5;
-	}
-	#ifdef FIRST_DEBUG
-	printf( " role_hr_total: " GREEN_FONT( " %d\n" ), tmp_hr );
-	#endif
-	return tmp_hr;
-}
-
-/**
- * 获取技能的命中率
- * @param	hr_type			命中率类型 1:人物的命中率 2:填写固定值  3:公式计算
- * @param	hr_value		公式ID或者值
- * @param	attack_member	战斗成员
- * @param	role_hr			人物的命中率
- */
-int get_skill_hit_ration( int hr_type, int hr_value, fight_unit_t *attack_member, int role_hr )
-{
-	int re = role_hr;
-	//固定的值
-	if ( 2 == hr_type )
-	{
-		re = hr_value;
-		#ifdef FIRST_DEBUG
-		printf( "\n命中率固定值:" GREEN_FONT( " %d" ), hr_value );
-		#endif
-	}
-	//公式计算
-	else if ( 3 == hr_type )
-	{
-		re = skill_formula( hr_value, attack_member );
-		#ifdef FIRST_DEBUG
-		printf( "\n命中率公式计算:" GREEN_FONT( " %d" ), re );
-		#endif
-	}
-	return re;
-}
-
-/**
- * 执行一个技能的效果
+ * 给一个成员加状态( 技能主动状态 )
  * @param	attack_member	状态来源者
  * @param	aim_member		状态承受者
- * @param	buff_head		状态头指针
- * @param	skill_level		技能等级
+ * @param	sk_buff			技能状态信息
  * @param	combat_info		战斗信息
  */
-void skill_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_buff_t *buff_head, int skill_level, combat_info_t *combat_info )
+static void skill_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_buff_t *sk_buff, combat_info_t *combat_info  )
 {
-	while ( NULL != buff_head )
+	buff_t *buff_info = sk_buff->buff_info;
+	//免疫负面效果
+	if ( 2 == buff_info->buff_type && aim_member->avoid_debuff )
 	{
-		int buff_last_time = 0;
-		//固定值
-		if ( 0 == buff_head->last_time_type )
-		{
-			buff_last_time = buff_head->last_time;
-		}
-		//公式计算
-		else
-		{
-			buff_last_time = skill_formula( buff_head->last_time, attack_member );
-		}
-		add_buff( attack_member, aim_member, buff_head->buff_info, skill_level, buff_last_time, combat_info );
-		buff_head = buff_head->next;
+		return;
 	}
+	//连击技能
+	if ( NULL != sk_buff->next )
+	{
+		//如果need_state是null了，就直接上这个状态
+		while ( NULL != sk_buff && NULL != sk_buff->need_buff )
+		{
+			fight_buff_t *have_buff = chk_have_buff( aim_member, sk_buff->need_buff->buff_info );
+			if ( NULL != have_buff )
+			{
+				remove_buff( aim_member, have_buff, REMOVE_BUFF_ONE, combat_info );
+				break;
+			}
+			sk_buff = sk_buff->next;
+		}
+		//出错的情况
+		if ( NULL == sk_buff )
+		{
+			return;
+		}
+		buff_info = sk_buff->buff_info;
+	}
+	int last_time;
+	//固定时间
+	if ( 0 == sk_buff->last_time_type )
+	{
+		last_time = sk_buff->last_time;
+	}
+	//公式计算
+	else
+	{
+		last_time = skill_formula( sk_buff->last_time, attack_member );
+	}
+	add_buff( attack_member, aim_member, buff_info, attack_member->skill_level, last_time, combat_info );
 }
 
 /**
@@ -665,7 +621,7 @@ void skill_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_buff_
  * @param	buff_lst_time	持续时间
  * @param	combat_info		战斗信息
  */
-void add_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, buff_t *buff_info, int skill_level, int buff_last_time, combat_info_t *combat_info )
+static void add_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, buff_t *buff_info, int skill_level, int buff_last_time, combat_info_t *combat_info )
 {
 	if ( is_dead( aim_member ) )
 	{
@@ -676,6 +632,7 @@ void add_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, buff_t *bu
 	debug_buff_type( buff_info->buff_type );
 	printf( " " YELLOW_FONT( "【%s】 时间:" GREEN_FONT( "%d 秒\n" ) ), debug_buff_name( buff_info->buff_id ), buff_last_time );
 	#endif
+
 	fight_buff_t *same_buff = chk_have_buff( aim_member, buff_info );
 	//已经有相同的状态了
 	if ( NULL != same_buff )
@@ -762,6 +719,7 @@ void add_extend_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, ext
 	{
 		return;
 	}
+	int old_skill_level = attack_member->skill_level;
 	while ( NULL != buff_head )
 	{
 		if ( 0 == buff_head->need_skill || skill_id == buff_head->need_skill )
@@ -772,10 +730,7 @@ void add_extend_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, ext
 		buff_head = buff_head->next;
 	}
 	//完事后，再次改成主动技能等级
-	if ( NULL != attack_member->anger_skill )
-	{
-		attack_member->skill_level = attack_member->anger_skill->skill_level;
-	}
+	attack_member->skill_level = old_skill_level;
 }
 
 /**
@@ -1185,7 +1140,7 @@ int find_direct_aim( int my_cell, fight_unit_t *aim_member[] )
  * 判断概率事件有没有发生
  * @param	prob			发生概率
  */
-int is_rand( int prob )
+static int is_rand( int prob )
 {
 	if ( prob <= 0 )
 	{
@@ -1222,7 +1177,7 @@ int skill_formula( int formula_id, fight_unit_t *attack )
  * @param	value			改变值
  * @param	combat_info		战斗信息
  */
-void change_vigour_value( fight_unit_t *member, int value, combat_info_t *combat_info )
+static void change_vigour_value( fight_unit_t *member, int value, combat_info_t *combat_info )
 {
 	member->vigour_now += value;
 	if ( member->vigour_now > member->vigour_max )
@@ -1744,7 +1699,7 @@ void init_skill_info( skill_t *sk_info )
  * 查找技能信息
  * @param	skill_id		技能ID
  */
-skill_t *find_skill_info( int skill_id )
+static skill_t *find_skill_info( int skill_id )
 {
 	int i = skill_id % DEF_SKILL_NUM;
 	skill_t *tmp_sk = GLOBAL_VARS.skill_info_pool[ i ];
@@ -1763,7 +1718,7 @@ skill_t *find_skill_info( int skill_id )
  * 查找一个信息的数据
  * @param	buff_id			状态ID
  */
-buff_t *find_buff_info( int buff_id )
+static buff_t *find_buff_info( int buff_id )
 {
 	//id不能超过池最大值
 	if ( buff_id >= DEF_SKILL_BUFF_NUM )
@@ -1890,10 +1845,10 @@ int read_fight_config_dat_file( char *file_path )
 		check_read_ret( read_ret );
 		skill_t *new_skill = ( skill_t* )malloc( sizeof( skill_t ) );
 		new_skill->skill_id = tmp_read_skill.skill_id;
-		new_skill->self_hit_ration[ 0 ] = tmp_read_skill.self_hr_type;
-		new_skill->self_hit_ration[ 1 ] = tmp_read_skill.self_hr;
-		new_skill->object_hit_ration[ 0 ] = tmp_read_skill.object_hr_type;
-		new_skill->object_hit_ration[ 1 ] = tmp_read_skill.object_hr;
+		new_skill->hit_ration[ 0 ] = tmp_read_skill.self_hr_type;
+		new_skill->hit_ration[ 1 ] = tmp_read_skill.self_hr;
+		new_skill->hit_ration[ 0 ] = tmp_read_skill.object_hr_type;
+		new_skill->hit_ration[ 1 ] = tmp_read_skill.object_hr;
 		new_skill->attack_num = tmp_read_skill.attack_num;
 		new_skill->object_aim = tmp_read_skill.object_aim;
 		new_skill->self_aim = tmp_read_skill.self_aim;

@@ -120,6 +120,36 @@ typedef struct fight_unit_t fight_unit_t;
 		member_list = combat_info->atk_member;																\
 	}
 
+//获取对于自己方成员的命中率
+#define skill_self_hit_ration( attack_member, use_sk, sk, hit_ration )										\
+	if ( 2 == sk->hit_ration[ 0 ] )																			\
+	{																										\
+		hit_ration = sk->hit_ration[ 1 ] + use_sk->add_hr;													\
+	}																										\
+	else if ( 3 == sk->hit_ration[ 0 ] )																	\
+	{																										\
+		hit_ration = skill_formula( sk->hit_ration[ 1 ], attack_member ) + use_sk->add_hr;					\
+	}
+
+//获取对于对方成员的命中率
+#define skill_object_hit_ration( attack_member, use_sk, sk, hit_ration, aim_ration )						\
+	if ( 2 == sk->hit_ration[ 0 ] )																			\
+	{																										\
+		hit_ration = sk->hit_ration[ 1 ] + use_sk->add_hr;													\
+	}																										\
+	else if ( 3 == sk->hit_ration[ 0 ] )																	\
+	{																										\
+		hit_ration = skill_formula( sk->hit_ration[ 1 ], attack_member ) + use_sk->add_hr;					\
+	}																										\
+	else																									\
+	{																										\
+		if ( 0 != use_sk->add_hr )																			\
+		{																									\
+			attack_member->once_effect.hr += use_sk->add_hr;												\
+		}																									\
+		hit_ration = get_hr_rate( attack_member, aim_member );												\
+	}
+
 #define fight_dr_pack( member )																				\
 	result_pack_dr_t pack_dr;																				\
 	pack_dr.pack_id = RESULT_MEMBER_DR;																		\
@@ -170,7 +200,7 @@ typedef struct buff_t buff_t;
 struct buff_t{
 	int					buff_id;				//状态id;
 	int					buff_type;				//状态类型 1:增益,2:减益
-	int					can_sup;				//是否可以叠加
+	int					can_sup;				//是否可以叠加 0 不可叠加 1 可叠加
 	int					expire_type;			//过期类型: 0 按秒 1:按回合
 	sk_effect_t			*buff_effect;			//状态的效果
 };
@@ -194,8 +224,7 @@ struct skill_t{
 	int					skill_cd;				//cd时间
 	int					life_cost[ 2 ];			//技能消耗的气血[类型 0:写死的值 1:公式算出来的, 值]
 	int					swf_action;				//动作模型 => 1:发动后会有攻击效果  2:发动后完全无攻击效果
-	int					self_hit_ration[ 2 ];	//自己方的命中率[ 1:人物的命中率 2:填写固定值  3:公式计算, 公式id 或者 值 ]
-	int					object_hit_ration[ 2 ];	//对方的命中率[ 1:人物的命中率 2:填写固定值  3:公式计算, 公式id 或者 值 ]
+	int					hit_ration[ 2 ];		//技能命中率[ 1:人物的命中率 2:填写固定值  3:公式计算, 公式id 或者 值 ]
 	int					attack_num;				//攻击次数
 	int					object_aim;				//技能作用的范围 0:单体攻击 1:扫荡攻击 2:突进攻击 3:半突击攻击 4:传递攻击 5:全屏攻击
 	int					self_aim;				//技能作用的范围 0:单体攻击 1:扫荡攻击 2:突进攻击 3:半突击攻击 4:传递攻击 5:全屏攻击
@@ -441,7 +470,7 @@ int find_direct_aim( int my_cell, fight_unit_t *aim_member[] );
  * 判断概率事件有没有发生
  * @param	prob			发生概率
  */
-int is_rand( int prob );
+static int is_rand( int prob );
 
 /**
  * php端要掉用到的公式统一入口
@@ -451,14 +480,13 @@ int is_rand( int prob );
 int skill_formula( int formula_id, fight_unit_t *attack );
 
 /**
- * 执行一个技能的效果
+ * 给一个成员加状态( 技能主动状态 )
  * @param	attack_member	状态来源者
  * @param	aim_member		状态承受者
- * @param	buff_head		状态头指针
- * @param	skill_level		技能等级
+ * @param	sk_buff			技能状态信息
  * @param	combat_info		战斗信息
  */
-void skill_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_buff_t *buff_head, int skill_level, combat_info_t *combat_info );
+static void skill_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_buff_t *sk_buff, combat_info_t *combat_info );
 
 /**
  * 给一个成员加状态
@@ -469,7 +497,7 @@ void skill_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_buff_
  * @param	buff_lst_time	持续时间
  * @param	combat_info		战斗信息
  */
-void add_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, buff_t *buff_info, int skill_level, int buff_last_time, combat_info_t *combat_info );
+static void add_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, buff_t *buff_info, int skill_level, int buff_last_time, combat_info_t *combat_info );
 
 /**
  * 移除指定的状态
@@ -545,22 +573,6 @@ void do_skill_effect( fight_unit_t *aim_member, int effect_id, int effect_value,
 fight_buff_t *chk_have_buff( fight_unit_t *aim_member, buff_t *buff_info );
 
 /**
- * 获取技能的命中率
- * @param	hr_type			命中率类型 1:人物的命中率 2:填写固定值  3:公式计算
- * @param	hr_value		公式ID或者值
- * @param	attack_member	战斗成员
- * @param	role_hr			人物的命中率
- */
-int get_skill_hit_ration( int hr_type, int hr_value, fight_unit_t *attack_member, int role_hr );
-
-/**
- * 获取普通攻击的命中率
- * @param	attack_member	攻击者
- * @param	aim_member		被攻击者
- */
-int get_hit_ration( fight_unit_t *attack_member, fight_unit_t *aim_member );
-
-/**
  * 改变怒气值
  * @param	member			战斗成员
  * @param	value			改变值
@@ -574,7 +586,7 @@ void change_anger_value( fight_unit_t *member, int value, combat_info_t *combat_
  * @param	value			改变值
  * @param	combat_info		战斗信息
  */
-void change_vigour_value( fight_unit_t *member, int value, combat_info_t *combat_info );
+static void change_vigour_value( fight_unit_t *member, int value, combat_info_t *combat_info );
 
 /**
  * 气血值改变
@@ -658,13 +670,13 @@ void init_skill_info( skill_t *sk_info );
  * 查找技能信息
  * @param	skill_id		技能ID
  */
-skill_t *find_skill_info( int skill_id );
+static skill_t *find_skill_info( int skill_id );
 
 /**
  * 查找一个信息的数据
  * @param	buff_id			状态ID
  */
-buff_t *find_buff_info( int buff_id );
+static buff_t *find_buff_info( int buff_id );
 
 /**
  * 读取战斗的配置信息

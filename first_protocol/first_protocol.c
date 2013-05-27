@@ -170,8 +170,10 @@ void protocol_packet_resize( protocol_packet_t *tmp_pack, uint32_t new_size )
 /**
  * bin转hex
  */
-static unsigned char *first_bin2hex( const unsigned char *bin_char, int bin_len )
+unsigned char *first_bin2hex( const unsigned char *bin_char, int bin_len )
 {
+	//hex输出对照表
+	const char *hexconvtab = "0123456789abcdef";
 	register unsigned char *result = NULL;
 	result = (unsigned char *)malloc( bin_len * 2 + 1 );
 	int i, j;
@@ -187,7 +189,7 @@ static unsigned char *first_bin2hex( const unsigned char *bin_char, int bin_len 
 /**
  * hex转bin
  */
-static char *first_hex2bin( const unsigned char *hex_str, int hex_len, int *new_len )
+char *first_hex2bin( const unsigned char *hex_str, int hex_len, int *new_len )
 {
 	if ( 0 != hex_len % 2 )
 	{

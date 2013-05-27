@@ -132,5 +132,12 @@ struct result_pack_end_t{
 	char		pack_id;
 	char		result;						//战斗最终结果
 };
+
+//免疫负面效果
+typedef struct result_pack_avoid_debuff_t result_pack_avoid_debuff;
+struct result_pack_avoid_debuff_t{
+	char		pack_id;					//包类型
+	uint8_t		index_id;					//成员
+};
 #pragma pack()
 #endif
