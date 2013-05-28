@@ -6,6 +6,7 @@
 #include <math.h>
 #include "init_define.h"
 #include "init_tool.h"
+#include "yile_protocol.h"
 //战斗中的成员
 typedef struct fight_unit_t fight_unit_t;
 #include "fight_formula.h"
@@ -272,6 +273,9 @@ typedef struct fight_buff_t fight_buff_t;
 //战斗中的流血效果
 typedef struct life_dot_t life_dot_t;
 
+//一场战斗的数据
+typedef struct combat_info_t combat_info_t;
+
 struct fight_unit_t{
 	int					round_num;				//出手的次数
 	int					next_round;				//下一轮出手的时间点
@@ -336,6 +340,7 @@ struct fight_unit_t{
 	use_skill_t			*anger_skill;			//怒气技能
 	use_skill_t			*vigour_skill;			//斗气技能
 	char				name[ MEMBER_NAME_LEN ];//成员名称
+	combat_info_t		*combat_info;			//当前战斗
 	fight_unit_t		*next;					//用于对象池
 };
 
@@ -374,8 +379,7 @@ struct ext_buff_t{
 
 //动态全局数据
 typedef struct global_t global_t;
-//一场战斗的数据
-typedef struct combat_info_t combat_info_t;
+
 struct combat_info_t{
 	int					unit_index;				//战斗成员的id索引
 	int					second;					//战斗进行的秒标志
@@ -437,15 +441,14 @@ void once_second( combat_info_t *combat_info );
  * 一次攻击过程
  * @param	attack_member	战斗成员
  * @param	use_skill		使用的技能
- * @param	combat_info		战斗信息
  * @param	atta_type		攻击类型 1:正常攻击 2:反击
  */
-void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill, combat_info_t *combat_info, int attack_type );
+void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill, int attack_type );
 
 /**
  * 一轮
  */
-void once_round( fight_unit_t *attack_member, combat_info_t *combat_info );
+void once_round( fight_unit_t *attack_member );
 
 /**
  * 选定技能目标
@@ -484,9 +487,8 @@ int skill_formula( int formula_id, fight_unit_t *attack );
  * @param	attack_member	状态来源者
  * @param	aim_member		状态承受者
  * @param	sk_buff			技能状态信息
- * @param	combat_info		战斗信息
  */
-static void skill_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_buff_t *sk_buff, combat_info_t *combat_info );
+static void skill_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_buff_t *sk_buff );
 
 /**
  * 给一个成员加状态
@@ -495,43 +497,38 @@ static void skill_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, s
  * @param	buff_info		状态信息
  * @param	skill_level		技能等级
  * @param	buff_lst_time	持续时间
- * @param	combat_info		战斗信息
  */
-static void add_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, buff_t *buff_info, int skill_level, int buff_last_time, combat_info_t *combat_info );
+static void add_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, buff_t *buff_info, int skill_level, int buff_last_time );
 
 /**
  * 移除指定的状态
  * @param	member			成员
  * @param	buff			状态
  * @param	remove_type		方式 REMOVE_BUFF_ONE:指定 REMOVE_BUFF_EXPIRE:过期 REMOVE_BUFF_ALL:全部 REMOVE_BUFF_BAD:负面 REMOVE_BUFF_GOOD:正面
- * @param	combat_info		战斗信息
  */
-void remove_buff( fight_unit_t *member, fight_buff_t *buff, int remove_type, combat_info_t *combat_info );
+void remove_buff( fight_unit_t *member, fight_buff_t *buff, int remove_type );
 
 /**
  * 清除所有的状态( 不做战斗属性计算 )
  * @param	member			成员
- * @param	combat_info		战斗信息
  */
-void clean_role_buff_list( fight_unit_t *member, combat_info_t *combat_info );
+void clean_role_buff_list( fight_unit_t *member );
 
 /**
  * 直接技能效果
  * @param	attack_member	状态来源者
  * @param	aim_member		状态承受者
  * @param	effect_head		效果头指针
- * @param	combat_info		战斗信息
  */
-void direct_effect( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_effect_t *effect_head, combat_info_t *combat_info );
+void direct_effect( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_effect_t *effect_head );
 
 /**
  * 直接被动效果
  * @param	aim_member		效果承受者
  * @param	effect_head		效果头指针
  * @param	skill_id		当前技能ID
- * @param	combat_info		战斗信息
  */
-void direct_extend_effect( fight_unit_t *aim_member, ext_effect_t *effect_head, int skill_id, combat_info_t *combat_info );
+void direct_extend_effect( fight_unit_t *aim_member, ext_effect_t *effect_head, int skill_id );
 
 /**
  * 被动技能状态
@@ -539,9 +536,8 @@ void direct_extend_effect( fight_unit_t *aim_member, ext_effect_t *effect_head, 
  * @param	aim_member		状态承受者
  * @param	buff_info		状态的头指针
  * @param	skill_id		技能等级
- * @param	combat_info		战斗信息
  */
-void add_extend_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, ext_buff_t *buff_head, int skill_id, combat_info_t *combat_info );
+void add_extend_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, ext_buff_t *buff_head, int skill_id );
 
 /**
  * 状态效果
@@ -550,9 +546,8 @@ void add_extend_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, ext
  * @param	effect_head		效果头指针
  * @param	effect_do_type	效果生效或者失效标志 EFFECT_ADD: 效果生效  EFFECT_CLEAN:效果失效
  * @param	buff_eff_value	缓存值
- * @param	combat_info		战斗信息
  */
-void buff_effect( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_effect_t *effect_head, int effect_do_type, int buff_eff_value[], combat_info_t *combat_info );
+void buff_effect( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_effect_t *effect_head, int effect_do_type, int buff_eff_value[] );
 
 /**
  * 执行效果
@@ -561,9 +556,8 @@ void buff_effect( fight_unit_t *attack_member, fight_unit_t *aim_member, sk_effe
  * @param	effect_value	效果值
  * @param	effect_do_type	效果生效或者失效标志 EFFECT_ADD: 效果生效  EFFECT_CLEAN:效果失效
  * @param	effect_type		效果持续类型 EFFECT_ONCE: 单次 EFFECT_MANY: 持续效果
- * @param	combat_info		战斗信息
  */
-void do_skill_effect( fight_unit_t *aim_member, int effect_id, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info );
+void do_skill_effect( fight_unit_t *aim_member, int effect_id, int effect_value, int effect_do_type, int effect_type );
 
 /**
  * 查看是否拥有相同的状态
@@ -576,26 +570,23 @@ fight_buff_t *chk_have_buff( fight_unit_t *aim_member, buff_t *buff_info );
  * 改变怒气值
  * @param	member			战斗成员
  * @param	value			改变值
- * @param	combat_info		战斗信息
  */
-void change_anger_value( fight_unit_t *member, int value, combat_info_t *combat_info );
+void change_anger_value( fight_unit_t *member, int value );
 
 /**
  * 改变斗气值
  * @param	member			战斗成员
  * @param	value			改变值
- * @param	combat_info		战斗信息
  */
-static void change_vigour_value( fight_unit_t *member, int value, combat_info_t *combat_info );
+static void change_vigour_value( fight_unit_t *member, int value );
 
 /**
  * 气血值改变
  * @param	member			战斗成员
  * @param	damage_type		伤害类型
  * @param	value			伤害类型
- * @param	combat_info		战斗信息
  */
-int change_life_value( fight_unit_t *member, int damage_type, int value, combat_info_t *combat_info );
+int change_life_value( fight_unit_t *member, int damage_type, int value );
 
 /**
  * 一次出手的被动技能效果和状态
@@ -603,17 +594,15 @@ int change_life_value( fight_unit_t *member, int damage_type, int value, combat_
  * @param	aim_member		承受者
  * @param	is_direct		是否是直接目标
  * @param	skill_id		技能ID
- * @param	combat_info		战斗信息
  */
-void pasv_skill_effect_and_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, int is_direct, int skill_id, combat_info_t *combat_info );
+void pasv_skill_effect_and_buff( fight_unit_t *attack_member, fight_unit_t *aim_member, int is_direct, int skill_id );
 
 /**
  * 普通攻击过程
  * @param	attack_member	攻击者
  * @param	aim_member		被攻击者
- * @param	combat_info		战斗信息
  */
-void normal_attack( fight_unit_t *attack_member, fight_unit_t *aim_member, combat_info_t *combat_info );
+void normal_attack( fight_unit_t *attack_member, fight_unit_t *aim_member );
 
 /**
  * 加入成员
@@ -625,23 +614,20 @@ void join_member( fight_unit_t *member, combat_info_t *combat_info );
 /**
  * 战斗中的每秒失血
  * @param	member_list		战斗的一方成员
- * @param	combat_info		战斗信息
  */
-void fight_dot_life( fight_unit_t *member_list[], combat_info_t *combat_info );
+void fight_dot_life( fight_unit_t *member_list[] );
 
 /**
  * 战斗中的状态过期
  * @param	member_list		战斗的一方成员
- * @param	combat_info		战斗信息
  */
-void fight_buff_expire( fight_unit_t *member_list[], combat_info_t *combat_info );
+void fight_buff_expire( fight_unit_t *member_list[] );
 
 /**
  * 清除一个已经死亡人的信息
  * @param	member			成员数据
- * @param	combat_info		战斗信息
  */
-void clean_member_data( fight_unit_t *member, combat_info_t *combat_info );
+void clean_member_data( fight_unit_t *member );
 
 /**
  * 战斗结束
@@ -722,11 +708,10 @@ void combat_try_change_team( combat_info_t *combat_info );
 /**
  * 解析技能使用字符串
  * @param	member			战斗成员
- * @param	combat_info		战斗信息
  * @param	use_str			使用技能字符串
  * @param	str_len			字符串长度
  */
-void parse_skill_use_str( fight_unit_t *member, combat_info_t *combat_info, char *use_str, int str_len );
+void parse_skill_use_str( fight_unit_t *member, char *use_str, int str_len );
 
 /**
  * 切割字符串
@@ -741,7 +726,6 @@ int fight_split_str( char *str, int str_len, char split_char, int arr_str[], int
 /**
  * 解析被动技能效果字符串
  * @param	member			战斗成员
- * @param	combat_info		战斗信息
  * @param	use_str			使用技能字符串
  * @param	str_len			字符串长度
  */
@@ -750,11 +734,10 @@ void parse_ext_effect_str( fight_unit_t *member, combat_info_t *combat_info, cha
 /**
  * 解析被动技能状态字符串
  * @param	member			战斗成员
- * @param	combat_info		战斗信息
  * @param	use_str			使用技能字符串
  * @param	str_len			字符串长度
  */
-void parse_ext_buff_str( fight_unit_t *member, combat_info_t *combat_info, char *use_str, int str_len );
+void parse_ext_buff_str( fight_unit_t *member, char *use_str, int str_len );
 
 /**
  * 战斗一方小队变更数据包
@@ -768,7 +751,6 @@ void push_change_team_result( combat_info_t *combat_info, int side, int team_id 
  * 反击攻击
  * @param	attack_member	攻击者
  * @param	aim_member		防守者
- * @param	combat_info		战斗信息
  */
-void counter_attack( fight_unit_t *attack_member, fight_unit_t *aim_member, combat_info_t *combat_info );
+void counter_attack( fight_unit_t *attack_member, fight_unit_t *aim_member );
 #endif

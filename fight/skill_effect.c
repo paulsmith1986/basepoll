@@ -5,16 +5,15 @@
  * @param	effect_value	效果值
  * @param	effect_do_type	效果生效或者失效标志 EFFECT_ADD: 效果生效  EFFECT_CLEAN:效果失效
  * @param	effect_type		效果持续类型 EFFECT_ONCE: 单次 EFFECT_MANY: 持续效果
- * @param	combat_info		战斗信息
  */
-void skill_effect_0( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_0( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 }
 
 /**
  * 攻击力
  */
-void skill_effect_1( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_1( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -36,7 +35,7 @@ void skill_effect_1( fight_unit_t *aim_member, int effect_value, int effect_do_t
 /**
  * 攻击力增加百分比
  */
-void skill_effect_2( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_2( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -58,7 +57,7 @@ void skill_effect_2( fight_unit_t *aim_member, int effect_value, int effect_do_t
 /**
  * 增加防御力
  */
-void skill_effect_3( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_3( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -74,7 +73,7 @@ void skill_effect_3( fight_unit_t *aim_member, int effect_value, int effect_do_t
 /**
  * 增加防御力百分比
  */
-void skill_effect_4( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_4( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -90,7 +89,7 @@ void skill_effect_4( fight_unit_t *aim_member, int effect_value, int effect_do_t
 /**
  * 命中率
  */
-void skill_effect_5( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_5( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -111,7 +110,7 @@ void skill_effect_5( fight_unit_t *aim_member, int effect_value, int effect_do_t
 /**
  * 闪避率
  */
-void skill_effect_6( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_6( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -127,7 +126,7 @@ void skill_effect_6( fight_unit_t *aim_member, int effect_value, int effect_do_t
 /**
  * 暴击率
  */
-void skill_effect_7( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_7( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -148,7 +147,7 @@ void skill_effect_7( fight_unit_t *aim_member, int effect_value, int effect_do_t
 /**
  * 免暴率
  */
-void skill_effect_8( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_8( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -164,7 +163,7 @@ void skill_effect_8( fight_unit_t *aim_member, int effect_value, int effect_do_t
 /**
  * 暴击伤害
  */
-void skill_effect_9( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_9( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -185,7 +184,7 @@ void skill_effect_9( fight_unit_t *aim_member, int effect_value, int effect_do_t
 /**
  * 伤害反弹
  */
-void skill_effect_10( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_10( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -201,7 +200,7 @@ void skill_effect_10( fight_unit_t *aim_member, int effect_value, int effect_do_
 /**
  * 吸血率
  */
-void skill_effect_11( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_11( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -222,51 +221,51 @@ void skill_effect_11( fight_unit_t *aim_member, int effect_value, int effect_do_
 /**
  * 怒气改变
  */
-void skill_effect_12( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_12( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	if ( EFFECT_ONCE == effect_type )
 	{
-		change_anger_value( aim_member, effect_value, combat_info );
+		change_anger_value( aim_member, effect_value );
 	}
 }
 
 /**
  * 个体负面清除
  */
-void skill_effect_13( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_13( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	if ( EFFECT_ONCE == effect_type )
 	{
-		remove_buff( aim_member, NULL, REMOVE_BUFF_BAD, combat_info );
+		remove_buff( aim_member, NULL, REMOVE_BUFF_BAD );
 	}
 }
 
 /**
  * 个体正面清除
  */
-void skill_effect_14( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_14( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	if ( EFFECT_ONCE == effect_type )
 	{
-		remove_buff( aim_member, NULL, REMOVE_BUFF_GOOD, combat_info );
+		remove_buff( aim_member, NULL, REMOVE_BUFF_GOOD );
 	}
 }
 
 /**
  * 个体所有状态清除
  */
-void skill_effect_15( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_15( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	if ( EFFECT_ONCE == effect_type )
 	{
-		remove_buff( aim_member, NULL, REMOVE_BUFF_ALL, combat_info );
+		remove_buff( aim_member, NULL, REMOVE_BUFF_ALL );
 	}
 }
 
 /**
  * 持续改变气血 dot
  */
-void skill_effect_16( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_16( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -282,7 +281,7 @@ void skill_effect_16( fight_unit_t *aim_member, int effect_value, int effect_do_
 /**
  * 眩晕
  */
-void skill_effect_17( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_17( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -298,7 +297,7 @@ void skill_effect_17( fight_unit_t *aim_member, int effect_value, int effect_do_
 /**
  * 锁穴
  */
-void skill_effect_18( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_18( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -314,7 +313,7 @@ void skill_effect_18( fight_unit_t *aim_member, int effect_value, int effect_do_
 /**
  * 伤害加深
  */
-void skill_effect_19( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_19( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -330,57 +329,57 @@ void skill_effect_19( fight_unit_t *aim_member, int effect_value, int effect_do_
 /**
  * 气血值改变，当下
  */
-void skill_effect_20( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_20( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//当下效果
 	if ( EFFECT_ONCE == effect_type  )
 	{
-		change_life_value( aim_member, DAMAGE_SKILL, effect_value, combat_info );
+		change_life_value( aim_member, DAMAGE_SKILL, effect_value );
 	}
 }
 
 /**
  * 气血值改变(按气血上限百分比)，当下
  */
-void skill_effect_21( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_21( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//当下效果
 	if ( EFFECT_ONCE == effect_type  )
 	{
 		int damage = ceil( (float)( aim_member->life_max * effect_value ) / 100 );
-		change_life_value( aim_member, DAMAGE_SKILL, damage, combat_info );
+		change_life_value( aim_member, DAMAGE_SKILL, damage );
 	}
 }
 
 /**
  * 气血值改变(按当前气血值百分比)，当下
  */
-void skill_effect_22( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_22( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//当下效果
 	if ( EFFECT_ONCE == effect_type  )
 	{
 		int damage = ceil( (float)( aim_member->life_now *  effect_value ) / 100 );
-		change_life_value( aim_member, DAMAGE_SKILL, damage, combat_info );
+		change_life_value( aim_member, DAMAGE_SKILL, damage );
 	}
 }
 
 /**
  * 镇静
  */
-void skill_effect_23( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_23( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//当下效果
 	if ( EFFECT_ONCE == effect_type  )
 	{
-		change_anger_value( aim_member, aim_member->anger_now * -1, combat_info );
+		change_anger_value( aim_member, aim_member->anger_now * -1 );
 	}
 }
 
 /**
  * 武力值
  */
-void skill_effect_24( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_24( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -401,7 +400,7 @@ void skill_effect_24( fight_unit_t *aim_member, int effect_value, int effect_do_
 /**
  * 智力值
  */
-void skill_effect_25( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type, combat_info_t *combat_info )
+void skill_effect_25( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
