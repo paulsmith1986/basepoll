@@ -5,7 +5,7 @@ rm proto_size.h -f
 rm init_define.h -f
 rm skill_formula.* -f
 if [ $# != 1 ]; then
-    base_dir="/data/wwwroot/new_code/so/fight/"
+    base_dir="/data/wwwroot/tool/build/fight/"
 else
     base_dir="$1"
 fi

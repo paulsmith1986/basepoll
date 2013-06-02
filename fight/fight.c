@@ -19,7 +19,7 @@ int main()
 	init_skill_formula();
 	//初始化战斗
 	init_first_fight();
-	int read_re = read_fight_config_dat_file( "skill.dat" );
+	int read_re = read_fight_config_dat_file( (char*)"skill.dat" );
 	#ifdef FIRST_DEBUG
 	printf( "读取配置文件  re:%d\n", read_re );
 	#endif
@@ -27,15 +27,6 @@ int main()
 	{
 		return -1;
 	}
-	#ifdef FIRST_DEBUG
-	read_re = debug_read_config_skill_name( "skill_name.dat" );
-	printf( "读取技能的状态的名称 re:%d\n", read_re );
-	if ( read_re < 0 )
-	{
-		return -1;
-	}
-	#endif
-
 	combat_info.global_var = &global_vars;
 	int i = 0;
 	for ( i = 0; i < SIDE_MEMBER; ++i )
@@ -50,10 +41,38 @@ int main()
 		init_member( new_unit, DEFENCE_SIDE, i, &combat_info );
 		join_member( new_unit, &combat_info );
 	}
-	combat_info.max_second = 50;
-
+	combat_info.max_second = 500;
+	while ( 0 == combat_info.is_over )
+	{
+		printf( "当前秒:%d\n", combat_info.second );
+		once_second( &combat_info );
+	}
 	printf( "战斗结束 is_over = %d\n", combat_info.is_over );
 	return 0;
+}
+
+use_skill_t *make_skill( int skill_type, combat_info_t *combat_info )
+{
+	int vk_skill_id[ 77 ] = {1,2,3,5,6,8,11,16,26,31,35,46,51,52,53,55,56,58,61,65,75,79,83,94,99,100,101,103,104,106,109,112,114,120,121,122,125,130,134,141,144,149,150,151,153,154,156,159,164,174,178,182,191,196,197,198,199,200,202,203,204,205,206,208,209,210,211,212,213,214,216,217,219,220,222,226,227};
+	int ag_skill_id[ 35 ] = {9,17,21,30,36,41,50,59,66,71,78,84,89,98,107,115,119,129,135,140,148,157,165,169,177,183,188,195,201,207,215,223,224,225,228};
+	int skill_id;
+	if ( 1 == skill_type )
+	{
+		skill_id = vk_skill_id[ first_rand( 0, 74 ) ];
+	}
+	else
+	{
+		skill_id = ag_skill_id[ first_rand( 0, 34 ) ];
+	}
+	skill_t *skill_info = find_skill_info( skill_id );
+	use_skill_t *use_sk = create_use_skill( combat_info );
+	use_sk->skill_id = skill_id;
+	use_sk->skill_level = first_rand( 3, 5 );
+	use_sk->add_hr = 0;
+	use_sk->skill_cost = 50;
+	use_sk->cd_use_time = 0;
+	use_sk->skill_info = skill_info;
+	return use_sk;
 }
 
 /**
@@ -62,52 +81,36 @@ int main()
 void init_member( fight_unit_t *member, int side, int cell_id, combat_info_t *combat_info )
 {
 	memset( member, 0, sizeof( fight_unit_t ) );
-	/*member->cell_id = cell_id;
+	member->cell_id = cell_id;
 	member->side = side;
 	member->level = first_rand( 1, 100 );
 	member->life_max = first_rand( 10000, 20000 );
 	member->life_now = member->life_max;
-	member->anger_max = first_rand( 100, 200 );
-	member->hit_rating = first_rand( 5, 50 );
+	member->hit_ration = first_rand( 5, 50 );
 	member->dodge_ration = first_rand( 5, 50 );
-	member->deadly_strike = first_rand( 5, 50 );
-	member->attack_max = first_rand( 300, 400 );
-	member->attack_min = first_rand( 200, 300 );
-	member->attack_type = first_rand( 1, 2 );
-	member->attack_area = first_rand( 1, 5 );
+	member->ds_ration = first_rand( 5, 50 );
+	member->attack_max = first_rand( 300, 500 );
+	member->attack_min = first_rand( 200, 400 );
 	member->ds_damage = first_rand( 5, 20 );
 	member->defence = first_rand( 100, 200 );
 	member->suck = first_rand( 0, 3 );
 	member->damage_return = first_rand( 0, 3 );
-	member->avoid_ds = first_rand( 5, 20 );
+	member->tenacity = first_rand( 5, 20 );
 	member->avoid_harm = first_rand( 5, 20 );
-	member->IQ = first_rand( 50, 100 );
-	member->force = first_rand( 50, 100 );
-	member->attack_num = first_rand( 1, 3 );
-	ext_effect_t *eff = create_ext_effect( combat_info );
-	eff->effect_id = first_rand( 1, 25 );
-	eff->effect_value = first_rand( 50, 500 );
-	eff->need_skill = 0;
-	eff->next = NULL;
-	int skill_id = 1;
-	skill_t *tmp_skill_info = find_skill_info( skill_id );
-	if ( NULL == tmp_skill_info )
-	{
-		member->anger_skill = NULL;
-	}
-	else
-	{
-		use_skill_t *tmp_use_skill = create_use_skill( combat_info );
-		tmp_use_skill->skill_id = skill_id;
-		tmp_use_skill->skill_level = 3;
-		tmp_use_skill->add_hr = 0;
-		member->skill_level = tmp_use_skill->skill_level;
-		tmp_use_skill->use_anger = first_rand( 20, 60 );
-		tmp_use_skill->skill_info = tmp_skill_info;
-		member->anger_skill = tmp_use_skill;
-	}
-	member->attack_object_eff[ AIM_DIRECT ] = eff;
-	*/
+	member->str = first_rand( 100, 300 );
+	member->dex = first_rand( 100, 300 );
+	member->vit = first_rand( 100, 300 );
+	member->base_speed = first_rand( 10, 20 );
+	member->ca_ration = first_rand( 50, 90 );
+	member->vigour_skill = make_skill( 1, combat_info );
+	member->anger_skill = make_skill( 2, combat_info );
+	ext_buff_t *tmp_buff = create_ext_buff( combat_info );
+	tmp_buff->next = NULL;
+	tmp_buff->level = 2;
+	tmp_buff->last_time = 3;
+	tmp_buff->need_skill = 0;
+	tmp_buff->buff_info = find_buff_info( 10801 );
+	member->ext_object_buff = tmp_buff;
 }
 
 /**

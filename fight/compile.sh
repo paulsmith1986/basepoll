@@ -13,7 +13,7 @@ case "$1" in
 	;;
 esac
 
-
+./cpy.sh
 make clean
 make libfirstfight.a
 make libfirstfightformula.a
@@ -24,6 +24,7 @@ if [ -d "$bak_dir" ]
 then
 rm "$bak_dir" -rf;
 fi
+
 mkdir "$bak_dir"
 mkdir "$bak_dir"/include
 mkdir "$bak_dir"/lib

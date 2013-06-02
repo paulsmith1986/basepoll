@@ -67,4 +67,30 @@ ext_buff_t *create_ext_buff( combat_info_t *combat_info );
  */
 void destroy_ext_buff_all( ext_buff_t *tmp_buff, combat_info_t *combat_info );
 
+/**
+ * 创建流血效果
+ * @param	combat_info		战斗信息
+ */
+life_dot_t *create_life_dot( combat_info_t *combat_info );
+
+/**
+ * 回收一个流血效果
+ * @param	tmp_dit			流血效果
+ * @param	combat_info		战斗信息
+ */
+void destroy_life_dot( life_dot_t *tmp_dot, combat_info_t *combat_info );
+
+/**
+ * 创建状态时间增加
+ * @param	combat_info		战斗信息
+ */
+buff_addtime_t *create_buff_addtime( combat_info_t *combat_info );
+
+/**
+ * 回收状态时间增加
+ * @param	tmp_dit			流血效果
+ * @param	combat_info		战斗信息
+ */
+void destroy_buff_addtime( buff_addtime_t *tmp_dot, combat_info_t *combat_info );
+
 #endif

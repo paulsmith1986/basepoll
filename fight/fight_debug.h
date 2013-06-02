@@ -27,9 +27,8 @@
 	#define YELLOW_FONT( format ) FIRST_YELLOW format FIRST_COLOR_END
 	#define PINK_FONT( format ) FIRST_PINK format FIRST_COLOR_END
 	#define debug_attack_side( side, end_char ) ATTACK_SIDE == side ? printf( GREEN_FONT( "【攻击方】" ) end_char ) : printf( CYAN_FONT( "【防守方】" end_char ) )
-	#define debug_attack_type( type, end_char ) ATTACK_PHYSICS == type ? printf( CYAN_FONT( "【物理攻击】" ) end_char ) : printf( CYAN_FONT( "【法术攻击】" end_char ) )
 	#define debug_change_value( value, end_char ) value > 0 ? printf( GREEN_FONT( "+%d" ) end_char, value ) : printf( RED_FONT( "%d" ) end_char, value )
-	#define debug_buff_type( type ) 1 == type ? printf( GREEN_FONT( " 〓增益状态〓 " ) ) : printf( RED_FONT( " 〓减益状态〓 " ) )
+	#define debug_buff_type( type ) 1 == type ? printf( " 〓增益状态〓 " ) : printf( " 〓减益状态〓 " )
 
 	typedef struct skill_name_t skill_name_t;
 	struct skill_name_t{
@@ -38,9 +37,20 @@
 		skill_name_t *next;
 	};
 
-	char **DEBUG_BUFF_NAME;
-	skill_name_t **DEBUG_SKILL_NAME;
-	#define debug_buff_name( buff_id ) DEBUG_BUFF_NAME[ buff_id ]
+	typedef struct buff_name_t buff_name_t;
+	struct buff_name_t{
+		int		buff_id;			//buff ID
+		char*	buff_name;			//状态名称
+		buff_name_t *next;
+	};
+
+	/**
+	 * 获取技能名称
+	 */
+	buff_name_t *find_buff_name( int buff_id );
+
+	skill_name_t *DEBUG_SKILL_NAME[ DEF_SKILL_NUM ];
+	buff_name_t *DEBUG_BUFF_NAME[ DEF_SKILL_BUFF_NUM ];
 
 	/**
 	 * 获取技能名称
@@ -59,20 +69,22 @@
 		}
 		return tmp_sk;
 	}
-	char *debug_skill_name( int skill_id )
+	/**
+	 * 显示技能名称
+	 */
+	const char *debug_skill_name( int skill_id )
 	{
 		skill_name_t *tmp_sk = find_skill_name( skill_id );
 		if ( NULL == tmp_sk )
 		{
-			return "无名称";
+			const char *sk_name = "无名称";
+			return sk_name;
 		}
 		else
 		{
 			return tmp_sk->skill_name;
 		}
 	}
-
-
 
 	/**
 	 * 设置技能名称
@@ -92,95 +104,99 @@
 	}
 
 	/**
-	 * 读取技能字符串
+	 * 显示状态名
 	 */
-	int debug_read_config_skill_name( char *file_path )
+	const char *debug_buff_name( int buff_id )
 	{
-		FILE *config_file;
-		if ( NULL == ( config_file = fopen( file_path, "r" ) ) )
+		buff_name_t *tmp_buff = find_buff_name( buff_id );
+		if ( NULL == tmp_buff )
 		{
-			return -1;
+			const char *buff_name = "未知";
+			return buff_name;
 		}
-		uint16_t buff_num = -1;
-		uint16_t skill_num = -1;
-		int read_ret = fread( &buff_num, sizeof( buff_num ), 1, config_file );
-		check_read_ret( read_ret );
-		while ( buff_num > 0 )
+		else
 		{
-			--buff_num;
-			uint16_t buff_id;
-			int read_ret = fread( &buff_id, sizeof( buff_id ), 1, config_file );
-			check_read_ret( read_ret );
-			#ifdef FIRST_DEBUG
-			printf( "查找状态 ID:%d\n", buff_id );
-			#endif
-			buff_t *buff_info = find_buff_info( buff_id );
-			if ( NULL != buff_info )
-			{
-				int is_error = 0;
-				DEBUG_BUFF_NAME[ buff_id ] = debug_read_config_name( config_file, &is_error );
-				if ( is_error )
-				{
-					return -5;
-				}
-			}
-			else
-			{
-				return -7;
-			}
+			return tmp_buff->buff_name;
 		}
-		read_ret = fread( &skill_num, sizeof( skill_num ), 1, config_file );
-		check_read_ret( read_ret );
-		while ( skill_num > 0 )
-		{
-			--skill_num;
-			uint16_t skill_id;
-			int read_ret = fread( &skill_id, sizeof( skill_id ), 1, config_file );
-			check_read_ret( read_ret );
-			skill_t *skill_info = find_skill_info( skill_id );
-			if ( NULL != skill_info )
-			{
-				int is_error = 0;
-				skill_name_t *sk_name = (skill_name_t*)malloc( sizeof( skill_name_t ) );
-				sk_name->skill_id = skill_id;
-				sk_name->skill_name = debug_read_config_name( config_file, &is_error );
-				set_skill_name( skill_id, sk_name );
-				if ( is_error )
-				{
-					return -6;
-				}
-			}
-			else
-			{
-				return -8;
-			}
-		}
-		return 0;
 	}
 
 	/**
-	 * 读取字符串
+	 * 获取技能名称
 	 */
-	char *debug_read_config_name( FILE *config_file, int *is_error )
+	buff_name_t *find_buff_name( int buff_id )
 	{
-		uint16_t name_len;
-		int read_ret = fread( &name_len, sizeof( name_len ), 1, config_file );
-		printf( "name_len : %d\n", name_len );
-		if ( 1 != read_ret )
+		int i = buff_id % DEF_SKILL_BUFF_NUM;
+		buff_name_t *tmp_buff = DEBUG_BUFF_NAME[ i ];
+		while ( NULL != tmp_buff )
 		{
-			*is_error = 1;
-			return NULL;
+			if ( tmp_buff->buff_id == buff_id )
+			{
+				break;
+			}
+			tmp_buff = tmp_buff->next;
 		}
-		char *re_name = ( char* )malloc( name_len + 1 );
-		read_ret = fread( re_name, name_len, 1, config_file );
-		if ( 1 != read_ret )
-		{
-			*is_error = 1;
-			return NULL;
-		}
-		re_name[ name_len ] = '\0';
-		return re_name;
+		return tmp_buff;
 	}
+
+	/**
+	 * 设置状态名称
+	 */
+	void set_buff_name( int buff_id, buff_name_t *buff_name )
+	{
+		int i = buff_id % DEF_SKILL_BUFF_NUM;
+		if ( NULL == DEBUG_BUFF_NAME[ i ] )
+		{
+			DEBUG_BUFF_NAME[ i ] = buff_name;
+		}
+		else
+		{
+			buff_name->next = DEBUG_BUFF_NAME[ i ];
+			DEBUG_BUFF_NAME[ i ] = buff_name;
+		}
+	}
+
+	/**
+	 * 读取状态名称字符串
+	 * @param	buff_name_list		状态名称
+	 */
+	void debug_read_buff_name( proto_list_buff_name_t *buff_name_list )
+	{
+		int i;
+		for ( i = 0; i < buff_name_list->len; ++i )
+		{
+			proto_buff_name_t *tmp_name = &buff_name_list->item[ i ];
+			buff_t *buff_info = find_buff_info( tmp_name->buff_id );
+			if ( NULL != buff_info )
+			{
+				buff_name_t *buff_name = ( buff_name_t* )malloc( sizeof( buff_name_t ) );
+				buff_name->buff_id = tmp_name->buff_id;
+				buff_name->buff_name = strdup( tmp_name->buff_name );
+				set_buff_name( tmp_name->buff_id, buff_name );
+			}
+		}
+	}
+
+	/**
+	 * 读取技能名称字符串
+	 * @param	skill_name_list		技能名称
+	 */
+	void debug_read_skill_name( proto_list_skill_name_t *skill_name_list )
+	{
+		int i;
+		for ( i = 0; i < skill_name_list->len; ++i )
+		{
+			proto_skill_name_t *tmp_name = &skill_name_list->item[ i ];
+			skill_t *skill_info = find_skill_info( tmp_name->skill_id );
+			if ( NULL != skill_info )
+			{
+				skill_name_t *sk_name = (skill_name_t*)malloc( sizeof( skill_name_t ) );
+				sk_name->skill_id = tmp_name->skill_id;
+				sk_name->skill_name = strdup( tmp_name->skill_name );
+				set_skill_name( tmp_name->skill_id, sk_name );
+			}
+		}
+	}
+
 
 	/**
 	 * 显示效果名称
@@ -197,24 +213,35 @@
 		effect_name_list[ 5 ] = "命中率";
 		effect_name_list[ 6 ] = "闪避率";
 		effect_name_list[ 7 ] = "暴击率";
-		effect_name_list[ 8 ] = "免暴率";
+		effect_name_list[ 8 ] = "韧性";
 		effect_name_list[ 9 ] = "暴伤";
-		effect_name_list[ 10 ] = "反伤";
-		effect_name_list[ 11 ] = "吸血";
-		effect_name_list[ 12 ] = "怒气值";
-		effect_name_list[ 13 ] = "清除负面状态";
-		effect_name_list[ 14 ] = "清除正面状态";
-		effect_name_list[ 15 ] = "清除所有状态";
-		effect_name_list[ 16 ] = "DOT";
-		effect_name_list[ 17 ] = "晕眩";
-		effect_name_list[ 18 ] = "锁穴";
-		effect_name_list[ 19 ] = "伤害加深";
-		effect_name_list[ 20 ] = "气血值";
-		effect_name_list[ 21 ] = "气血值（按气血上限百分比）";
-		effect_name_list[ 22 ] = "气血值（按当前气血百分比）";
-		effect_name_list[ 23 ] = "镇静";
-		effect_name_list[ 24 ] = "武力值";
-		effect_name_list[ 25 ] = "智力值";
+		effect_name_list[ 10 ] = "反击率";
+		effect_name_list[ 11 ] = "碾压";
+		effect_name_list[ 12 ] = "伤害反弹";
+		effect_name_list[ 13 ] = "吸血率";
+		effect_name_list[ 14 ] = "怒气改变";
+		effect_name_list[ 15 ] = "斗气上限";
+		effect_name_list[ 16 ] = "无用";
+		effect_name_list[ 17 ] = "个体负面清除";
+		effect_name_list[ 18 ] = "个体正面清除";
+		effect_name_list[ 19 ] = "个体所有状态清除";
+		effect_name_list[ 20 ] = "无用";
+		effect_name_list[ 21 ] = "DOT";
+		effect_name_list[ 22 ] = "负面状态无效";
+		effect_name_list[ 23 ] = "眩晕";
+		effect_name_list[ 24 ] = "锁穴";
+		effect_name_list[ 25 ] = "伤害加深";
+		effect_name_list[ 26 ] = "无用";
+		effect_name_list[ 27 ] = "无用";
+		effect_name_list[ 28 ] = "无用";
+		effect_name_list[ 29 ] = "无用";
+		effect_name_list[ 30 ] = "气血改变";
+		effect_name_list[ 31 ] = "无用";
+		effect_name_list[ 32 ] = "镇静";
+		effect_name_list[ 33 ] = "怒气改变";
+		effect_name_list[ 34 ] = "碾压伤害";
+		effect_name_list[ 35 ] = "碾压无效";
+		effect_name_list[ 36 ] = "斗气改变";
 		if ( effect_id > SKILL_EFFECT_NUM )
 		{
 			printf( RED_FONT( "！！！！！！！！！！！！！！不支持的效果！！！！！！！！！！！！！！！！！" ) );

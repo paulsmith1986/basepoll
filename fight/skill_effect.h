@@ -1,9 +1,10 @@
 #ifndef FIRST_FIGHT_EFFECT_H
 #define FIRST_FIGHT_EFFECT_H
-#define SKILL_EFFECT_NUM 25					//技能效果的个数
+#define SKILL_EFFECT_NUM 36					//技能效果的个数
 #include "first_fight.h"
+#include "struct_pool.h"
 //所有效果集合
-void ( *skill_effect_arr[ SKILL_EFFECT_NUM + 1 ] )( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
+extern void ( *skill_effect_arr[] )( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
 
 /**
  * 初始化所有效果列表
@@ -19,13 +20,9 @@ void init_skill_effect();
  */
 void skill_effect_0( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
 
-
 void skill_effect_1( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
-
 void skill_effect_2( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
-
 void skill_effect_3( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
-
 void skill_effect_4( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
 void skill_effect_5( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
 void skill_effect_6( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
@@ -48,4 +45,15 @@ void skill_effect_22( fight_unit_t *aim_member, int effect_value, int effect_do_
 void skill_effect_23( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
 void skill_effect_24( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
 void skill_effect_25( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
+void skill_effect_26( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
+void skill_effect_27( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
+void skill_effect_28( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
+void skill_effect_29( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
+void skill_effect_30( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
+void skill_effect_31( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
+void skill_effect_32( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
+void skill_effect_33( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
+void skill_effect_34( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
+void skill_effect_35( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
+void skill_effect_36( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
 #endif

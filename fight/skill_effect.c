@@ -1,4 +1,8 @@
 #include "skill_effect.h"
+
+//所有效果集合
+void ( *skill_effect_arr[ SKILL_EFFECT_NUM + 1 ] )( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type );
+
 /**
  * 0号效果（当一个效果不存在的时候，容错）
  * @param	aim_member		效果承受者
@@ -145,7 +149,7 @@ void skill_effect_7( fight_unit_t *aim_member, int effect_value, int effect_do_t
 }
 
 /**
- * 免暴率
+ * 韧性
  */
 void skill_effect_8( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
@@ -156,7 +160,7 @@ void skill_effect_8( fight_unit_t *aim_member, int effect_value, int effect_do_t
 	}
 	if ( EFFECT_MANY == effect_type )
 	{
-		//aim_member->avoid_ds += effect_value;
+		aim_member->tenacity += effect_value;
 	}
 }
 
@@ -181,10 +185,43 @@ void skill_effect_9( fight_unit_t *aim_member, int effect_value, int effect_do_t
 	}
 }
 
+//反击
+void skill_effect_10( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+{
+	//如果是效果失效 值要变成负数
+	if ( EFFECT_CLEAN == effect_do_type )
+	{
+		effect_value *= -1;
+	}
+	if ( EFFECT_MANY == effect_type )
+	{
+		aim_member->ca_ration += effect_value;
+	}
+}
+
+//碾压
+void skill_effect_11( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+{
+	//如果是效果失效 值要变成负数
+	if ( EFFECT_CLEAN == effect_do_type )
+	{
+		effect_value *= -1;
+	}
+	//当下效果
+	if ( EFFECT_ONCE == effect_type  )
+	{
+		aim_member->once_effect.press += effect_value;
+	}
+	else
+	{
+		aim_member->press_ration += effect_value;
+	}
+}
+
 /**
  * 伤害反弹
  */
-void skill_effect_10( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_12( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -200,7 +237,7 @@ void skill_effect_10( fight_unit_t *aim_member, int effect_value, int effect_do_
 /**
  * 吸血率
  */
-void skill_effect_11( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_13( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -221,99 +258,193 @@ void skill_effect_11( fight_unit_t *aim_member, int effect_value, int effect_do_
 /**
  * 怒气改变
  */
-void skill_effect_12( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_14( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
-	if ( EFFECT_ONCE == effect_type )
+	//如果是效果失效 值要变成负数
+	if ( EFFECT_CLEAN == effect_do_type )
 	{
-		change_anger_value( aim_member, effect_value );
+		effect_value *= -1;
 	}
+	if ( EFFECT_MANY == effect_type )
+	{
+		aim_member->avoid_harm += effect_value;
+	}
+}
+
+/**
+ * 斗气上限
+ */
+void skill_effect_15( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+{
+	//如果是效果失效 值要变成负数
+	if ( EFFECT_CLEAN == effect_do_type )
+	{
+		effect_value *= -1;
+	}
+	if ( EFFECT_MANY == effect_type )
+	{
+		aim_member->vigour_max += effect_value;
+	}
+}
+
+/**
+ * 受攻击时怒气增加
+ */
+void skill_effect_16( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+{
+	//无用
 }
 
 /**
  * 个体负面清除
  */
-void skill_effect_13( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_17( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	if ( EFFECT_ONCE == effect_type )
 	{
-		remove_buff( aim_member, NULL, REMOVE_BUFF_BAD );
+		if ( NULL != aim_member->buff_list[ 0 ] )
+		{
+			remove_buff( aim_member, aim_member->buff_list[ 0 ], REMOVE_BUFF_BAD );
+		}
+		if ( NULL != aim_member->buff_list[ 1 ] )
+		{
+			remove_buff( aim_member, aim_member->buff_list[ 1 ], REMOVE_BUFF_BAD );
+		}
 	}
 }
 
 /**
  * 个体正面清除
  */
-void skill_effect_14( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_18( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	if ( EFFECT_ONCE == effect_type )
 	{
-		remove_buff( aim_member, NULL, REMOVE_BUFF_GOOD );
+		if ( NULL != aim_member->buff_list[ 0 ] )
+		{
+			remove_buff( aim_member, aim_member->buff_list[ 0 ], REMOVE_BUFF_GOOD );
+		}
+		if ( NULL != aim_member->buff_list[ 1 ] )
+		{
+			remove_buff( aim_member, aim_member->buff_list[ 1 ], REMOVE_BUFF_GOOD );
+		}
 	}
 }
 
 /**
  * 个体所有状态清除
  */
-void skill_effect_15( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_19( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	if ( EFFECT_ONCE == effect_type )
 	{
-		remove_buff( aim_member, NULL, REMOVE_BUFF_ALL );
+		if ( NULL != aim_member->buff_list[ 0 ] )
+		{
+			remove_buff( aim_member, aim_member->buff_list[ 0 ], REMOVE_BUFF_ALL );
+		}
+		if ( NULL != aim_member->buff_list[ 1 ] )
+		{
+			remove_buff( aim_member, aim_member->buff_list[ 1 ], REMOVE_BUFF_ALL );
+		}
 	}
 }
 
 /**
- * 持续改变气血 dot
+ * 受攻击时怒气增加
  */
-void skill_effect_16( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_20( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+{
+	//无用
+}
+
+//气血dot效果
+void skill_effect_21( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+{
+	//如果是效果失效 移除效果
+	if ( EFFECT_CLEAN == effect_do_type )
+	{
+		life_dot_t *dot_head = aim_member->dot_life;
+		life_dot_t *last_dot = NULL;
+		while ( NULL != dot_head )
+		{
+			if ( dot_head->value == effect_value )
+			{
+				if ( NULL == last_dot )
+				{
+					aim_member->dot_life = dot_head->next;
+				}
+				else
+				{
+					last_dot->next = dot_head->next;
+				}
+				destroy_life_dot( dot_head, aim_member->combat_info );
+				break;
+			}
+			last_dot = dot_head;
+			dot_head = dot_head->next;
+		}
+	}
+	else		//增加效果
+	{
+		life_dot_t *tmp_dot = create_life_dot( aim_member->combat_info );
+		tmp_dot->value = effect_value;
+		tmp_dot->next = aim_member->dot_life;
+		aim_member->dot_life = tmp_dot;
+	}
+}
+
+/**
+ * 负面状态无效
+ */
+void skill_effect_22( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
 	{
-		effect_value *= -1;
+		aim_member->avoid_debuff = 0;
 	}
-	if ( EFFECT_MANY == effect_type )
+	else
 	{
-		aim_member->dot_life += effect_value;
+		skill_effect_17( aim_member, 0, 0, EFFECT_ONCE );
+		aim_member->avoid_debuff = 1;
 	}
 }
+
 
 /**
  * 眩晕
  */
-void skill_effect_17( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_23( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
-	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
 	{
-		effect_value *= -1;
+		aim_member->stun = 0;
 	}
-	if ( EFFECT_MANY == effect_type )
+	else
 	{
-		aim_member->stun = effect_value;
+		aim_member->stun = 1;
 	}
 }
 
 /**
  * 锁穴
  */
-void skill_effect_18( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_24( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
-	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
 	{
-		effect_value *= -1;
+		aim_member->no_skill = 0;
 	}
-	if ( EFFECT_MANY == effect_type )
+	else
 	{
-		aim_member->no_skill = effect_value;
+		aim_member->no_skill = 1;
 	}
 }
 
 /**
  * 伤害加深
  */
-void skill_effect_19( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_25( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
@@ -326,95 +457,119 @@ void skill_effect_19( fight_unit_t *aim_member, int effect_value, int effect_do_
 	}
 }
 
+
 /**
- * 气血值改变，当下
+ * 斗气消耗
  */
-void skill_effect_20( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_26( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
-	//当下效果
-	if ( EFFECT_ONCE == effect_type  )
+	//无用
+}
+
+/**
+ * 怒气消耗
+ */
+void skill_effect_27( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+{
+	//无用
+}
+
+/**
+ * 斗气消耗
+ */
+void skill_effect_28( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+{
+	//无用
+}
+
+/**
+ * 怒气消耗
+ */
+void skill_effect_29( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+{
+	//无用
+}
+
+/**
+ * 气血改变
+ */
+void skill_effect_30( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+{
+	if ( EFFECT_ONCE == effect_type )
 	{
-		change_life_value( aim_member, DAMAGE_SKILL, effect_value );
+		//remove_buff( aim_member, NULL, REMOVE_BUFF_BAD );
 	}
 }
 
 /**
- * 气血值改变(按气血上限百分比)，当下
+ * 承受伤害加血
  */
-void skill_effect_21( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_31( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
-	//当下效果
-	if ( EFFECT_ONCE == effect_type  )
-	{
-		int damage = ceil( (float)( aim_member->life_max * effect_value ) / 100 );
-		change_life_value( aim_member, DAMAGE_SKILL, damage );
-	}
-}
-
-/**
- * 气血值改变(按当前气血值百分比)，当下
- */
-void skill_effect_22( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
-{
-	//当下效果
-	if ( EFFECT_ONCE == effect_type  )
-	{
-		int damage = ceil( (float)( aim_member->life_now *  effect_value ) / 100 );
-		change_life_value( aim_member, DAMAGE_SKILL, damage );
-	}
+	//无用
 }
 
 /**
  * 镇静
  */
-void skill_effect_23( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_32( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
-	//当下效果
-	if ( EFFECT_ONCE == effect_type  )
+	if ( EFFECT_ONCE == effect_type )
 	{
 		change_anger_value( aim_member, aim_member->anger_now * -1 );
 	}
 }
 
 /**
- * 武力值
+ * 怒气改变
  */
-void skill_effect_24( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_33( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
 	//如果是效果失效 值要变成负数
 	if ( EFFECT_CLEAN == effect_do_type )
 	{
 		effect_value *= -1;
 	}
-	//当下效果
-	if ( EFFECT_ONCE == effect_type  )
+	if ( EFFECT_MANY == effect_type )
 	{
-		//aim_member->once_effect.force += effect_value;
-	}
-	else
-	{
-		//aim_member->force += effect_value;
+		aim_member->avoid_harm += effect_value;
 	}
 }
 
 /**
- * 智力值
+ * 当下碾压伤害
  */
-void skill_effect_25( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+void skill_effect_34( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
-	//如果是效果失效 值要变成负数
+	if ( EFFECT_ONCE == effect_type )
+	{
+		aim_member->once_effect.press_damage += effect_value;
+	}
+}
+
+/**
+ * 碾压无效
+ */
+void skill_effect_35( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+{
 	if ( EFFECT_CLEAN == effect_do_type )
 	{
-		effect_value *= -1;
-	}
-	//当下效果
-	if ( EFFECT_ONCE == effect_type  )
-	{
-		//aim_member->once_effect.IQ += effect_value;
+		aim_member->avoid_press = 0;
 	}
 	else
 	{
-		//aim_member->IQ += effect_value;
+		aim_member->avoid_press = 1;
+	}
+}
+
+/**
+ * 斗气改变
+ */
+void skill_effect_36( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
+{
+	if ( EFFECT_ONCE == effect_type )
+	{
+		change_vigour_value( aim_member, effect_value );
 	}
 }
 
@@ -423,11 +578,7 @@ void skill_effect_25( fight_unit_t *aim_member, int effect_value, int effect_do_
  */
 void init_skill_effect()
 {
-	int i;
-	for ( i = 0; i <= SKILL_EFFECT_NUM; ++i )
-	{
-		skill_effect_arr[ i ] = skill_effect_0;
-	}
+	skill_effect_arr[ 0 ] = skill_effect_0;
 	skill_effect_arr[ 1 ] = skill_effect_1;
 	skill_effect_arr[ 2 ] = skill_effect_2;
 	skill_effect_arr[ 3 ] = skill_effect_3;
@@ -453,4 +604,15 @@ void init_skill_effect()
 	skill_effect_arr[ 23 ] = skill_effect_23;
 	skill_effect_arr[ 24 ] = skill_effect_24;
 	skill_effect_arr[ 25 ] = skill_effect_25;
+	skill_effect_arr[ 26 ] = skill_effect_26;
+	skill_effect_arr[ 27 ] = skill_effect_27;
+	skill_effect_arr[ 28 ] = skill_effect_28;
+	skill_effect_arr[ 29 ] = skill_effect_29;
+	skill_effect_arr[ 30 ] = skill_effect_30;
+	skill_effect_arr[ 31 ] = skill_effect_31;
+	skill_effect_arr[ 32 ] = skill_effect_32;
+	skill_effect_arr[ 33 ] = skill_effect_33;
+	skill_effect_arr[ 34 ] = skill_effect_34;
+	skill_effect_arr[ 35 ] = skill_effect_35;
+	skill_effect_arr[ 36 ] = skill_effect_36;
 }

@@ -4,5 +4,5 @@
 #include "init_define.h"
 #include "first_fight.h"
 void init_skill_formula();
-int ( *skill_formula_arr[ SKILL_FORMULA_NUM ] )( fight_unit_t *attack );
+extern int ( *skill_formula_arr[] )( fight_unit_t *attack );
 #endif
