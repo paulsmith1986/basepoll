@@ -3,7 +3,7 @@
 #include "first_fight.h"
 #pragma pack(1)
 
-#define			RESULT_NEW_SEC				1			//每一秒开始
+#define			RESULT_NEW_SEC				1			//每一秒结束
 #define			RESULT_NEW_TEAM				2			//切换小队
 #define			RESULT_JOIN_MEMBER			3			//加入新成员
 #define			RESULT_ATTACK				4			//出手攻击
@@ -17,31 +17,35 @@
 #define			RESULT_MEMBER_DIE			12			//成员阵亡
 #define			RESULT_FIGHT_END			13			//战斗结束
 #define			RESULT_ANGER_ADD			14			//怒气改变
+#define			RESULT_VIGOUR_ADD			15			//斗气改变
+#define			RESULT_MEMBER_CA			16			//反击开始
+#define			RESULT_MEMBER_CA_END		17			//反击结束
+#define			RESULT_MEMBER_COM			18			//碾压
 
 //切换小队包
 typedef struct result_pack_new_team_t result_pack_new_team_t;
 struct result_pack_new_team_t{
-	char		pack_id;
+	char		pack_id;					//2
 	char		side;						//立场
 	char		team_id;					//小队ID
 };
 //成员数据包
 typedef struct result_pack_join_t result_pack_join_t;
 struct result_pack_join_t{
-	char		pack_id;
+	char		pack_id;					//3
 	uint8_t		index_id;					//在战斗中的序号
 	char		side;						//立场
 	char		cell_id;					//格子ID
-	uint16_t	anger_max;					//怒气值上限
+	uint16_t	vigour_max;					//斗气值上限
 	int			life_max;					//最大气血
 	uint32_t	swf_id;						//模型Id
 	char		name[ MEMBER_NAME_LEN ];	//名称长度  MEMBER_NAME_LEN = 20
 };
 
-//新的一秒开始
+//一秒时间结束
 typedef struct result_pack_sec_t result_pack_sec_t;
 struct result_pack_sec_t{
-	char		pack_id;
+	char		pack_id;					//1
 	uint16_t	sec;						//秒数
 };
 
@@ -51,9 +55,19 @@ struct result_pack_attack_t{
 	char		pack_id;
 	uint8_t		index_id;					//ID
 	uint16_t	skill_id;					//技能ID
-	char		attack_num;					//攻击次数
-	char		attack_area;				//攻击范围
+	char		attack_area;				//攻击范围 0:单体攻击 1:扫荡攻击 2:突进攻击 3:半突击攻击 4:传递攻击 5:全屏攻击
 };
+
+/*
+ * 气血改变原因
+#define		DAMAGE_ATTACK			1			//攻击造成伤害
+#define		DAMAGE_SKILL			2			//技能效果直接造成伤害
+#define		DAMAGE_RETURN			3			//伤害反弹
+#define		DAMAGE_SUCK				4			//吸血
+#define		DAMAGE_DOT				5			//DOT伤害
+#define		DAMAGE_SKILL_COST		6			//技能消耗
+#define		DAMAGE_PRESS			7			//碾压伤害
+*/
 
 //小气血包
 typedef struct result_pack_life_s_t result_pack_life_s_t;
@@ -63,6 +77,7 @@ struct result_pack_life_s_t{
 	char		reason;						//原因
 	char		value;						//改变量
 };
+
 //中气血包
 typedef struct result_pack_life_m_t result_pack_life_m_t;
 struct result_pack_life_m_t{
@@ -105,9 +120,37 @@ struct result_pack_anger_t{
 	uint16_t	new_anger;					//新的怒气值
 };
 
+//斗气值改变
+typedef struct result_pack_vigour_t result_pack_vigour_t;
+struct result_pack_vigour_t{
+	char		pack_id;
+	uint8_t		index_id;					//ID
+	uint16_t	new_vigour;					//新的斗气值
+};
 //躲闪
 typedef struct result_pack_dr_t result_pack_dr_t;
 struct result_pack_dr_t{
+	char		pack_id;
+	uint8_t		index_id;					//ID
+};
+
+//反击开始
+typedef struct result_pack_ca_t result_pack_ca_t;
+struct result_pack_ca_t{
+	char		pack_id;
+	uint8_t		index_id;					//ID
+};
+
+//反击结束
+typedef struct result_pack_ca_end_t result_pack_ca_end_t;
+struct result_pack_ca_end_t{
+	char		pack_id;
+	uint8_t		index_id;					//ID
+};
+
+//碾压
+typedef struct result_pack_com_t result_pack_com_t;
+struct result_pack_com_t{
 	char		pack_id;
 	uint8_t		index_id;					//ID
 };

@@ -29,11 +29,7 @@ void once_second( combat_info_t *combat_info )
 	printf( "=====================第 %d 秒=======================\n", combat_info->second );
 	#endif
 
-	//输出结果
-	result_pack_sec_t pack_sec;
-	pack_sec.pack_id = RESULT_NEW_SEC;
-	pack_sec.sec = combat_info->second;
-	push_fight_result( combat_info, &pack_sec, sizeof( result_pack_sec_t ) );
+	int old_result_pos = combat_info->result_pos;
 
 	//Dot流血效果
 	fight_dot_life( combat_info->atk_member );
@@ -82,6 +78,14 @@ void once_second( combat_info_t *combat_info )
 	//状态过期
 	fight_buff_expire( combat_info->atk_member );
 	fight_buff_expire( combat_info->def_member );
+	if ( old_result_pos != combat_info->result )
+	{
+		//输出结果
+		result_pack_sec_t pack_sec;
+		pack_sec.pack_id = RESULT_NEW_SEC;
+		pack_sec.sec = combat_info->second;
+		push_fight_result( combat_info, &pack_sec, sizeof( result_pack_sec_t ) );
+	}
 }
 
 /**
@@ -252,7 +256,6 @@ void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill )
 	pack_attack.index_id = attack_member->index;
 	pack_attack.skill_id = skill_info->skill_id;
 	pack_attack.attack_area = skill_info->object_aim;
-	pack_attack.attack_area = skill_info->attack_num;
 	push_fight_result( combat_info, &pack_attack, sizeof( result_pack_attack_t ) );
 
 	//出手后给自己的被动状态
@@ -516,6 +519,7 @@ void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill )
  */
 void counter_attack( fight_unit_t *attack_member, fight_unit_t *aim_member )
 {
+	fight_ca_pack( attack_member );
 	#ifdef FIRST_DEBUG
 	printf( "【反击】成员 %d_%d 反击\n", attack_member->side, attack_member->cell_id );
 	#endif
@@ -532,6 +536,7 @@ void counter_attack( fight_unit_t *attack_member, fight_unit_t *aim_member )
 		combat_info_t *combat_info = aim_member->combat_info;
 		fight_dr_pack( aim_member );
 	}
+	fight_ca_end_pack( attack_member );
 }
 
 /**
@@ -1163,6 +1168,13 @@ void change_vigour_value( fight_unit_t *member, int value )
 	{
 		member->vigour_now = member->vigour_max;
 	}
+	//存入结果
+	result_pack_vigour_t vigour_pack;
+	vigour_pack.pack_id = RESULT_VIGOUR_ADD;
+	vigour_pack.index_id = member->index;
+	vigour_pack.new_vigour = member->vigour_now;
+	combat_info_t *combat_info = member->combat_info;
+	push_fight_result( combat_info, &vigour_pack, sizeof( result_pack_vigour_t ) );
 }
 
 /**
@@ -1327,6 +1339,9 @@ void push_fight_result( combat_info_t *combat_info, void *data, int len )
 {
 	if ( combat_info->result_pos + len > combat_info->result_pos_max )
 	{
+		#ifdef YILE_DEBUG
+		printf( "Resize fight result!\n" );
+		#endif
 		char *new_fight_result = ( char* )malloc( combat_info->result_pos_max + FIGHT_RESULT_CHAR );
 		memcpy( new_fight_result, combat_info->fight_result, combat_info->result_pos );
 		if ( combat_info->is_free_result )
@@ -1364,6 +1379,7 @@ void normal_attack( fight_unit_t *attack_member, fight_unit_t *aim_member )
 	//暴击判断
 	if ( is_rand( get_ds_rate( attack_member, aim_member ) ) )
 	{
+		fight_ds_pack( attack_member );
 		//如果暴击后会有附加状态
 		if ( NULL != attack_member->ds_ext_buff )
 		{
@@ -1411,8 +1427,7 @@ void normal_attack( fight_unit_t *attack_member, fight_unit_t *aim_member )
 		//碾压率
 		if ( is_rand( attack_member->press_ration + attack_member->once_effect.press ) )
 		{
-			//输出结果 todo
-
+			fight_com_pack( attack_member );
 			//判断是否碾压无效
 			if ( 0 == aim_member->avoid_press )
 			{
@@ -1461,6 +1476,7 @@ void join_member( fight_unit_t *member, combat_info_t *combat_info )
 	join_pack.side = member->side;
 	join_pack.cell_id = member->cell_id;
 	join_pack.life_max = member->life_max;
+	join_pack.vigour_max = member->vigour_max;
 	join_pack.swf_id = member->swf_id;
 	member->combat_info = combat_info;
 	memcpy( &join_pack.name, member->name, MEMBER_NAME_LEN );

@@ -20,7 +20,7 @@ typedef struct fight_unit_t fight_unit_t;
 #define		DEFENCE_SIDE			1			//防守方
 #define		SIDE_MEMBER				9			//每一方的战斗人数
 #define		FIGHT_INTERVAL			10			//出手间隔
-#define		FIGHT_RESULT_CHAR		512		//战斗结果缓存大小
+#define		FIGHT_RESULT_CHAR		32 * 1024	//战斗结果缓存大小
 #define		EFFECT_ADD				1			//效果生效
 #define		EFFECT_CLEAN			0			//效果失效
 #define		EFFECT_ONCE				1			//单次效果
@@ -134,12 +134,37 @@ typedef struct fight_unit_t fight_unit_t;
 		}																									\
 		hit_ration = get_hr_rate( attack_member, aim_member );												\
 	}
-
+//闪避
 #define fight_dr_pack( member )																				\
 	result_pack_dr_t pack_dr;																				\
 	pack_dr.pack_id = RESULT_MEMBER_DR;																		\
 	pack_dr.index_id = member->index;																		\
-	push_fight_result( combat_info, &pack_dr, sizeof( result_pack_dr_t ) )
+	push_fight_result( member->combat_info, &pack_dr, sizeof( result_pack_dr_t ) )
+//暴击
+#define fight_ds_pack( member )																				\
+	result_pack_dr_t pack_ds;																				\
+	pack_ds.pack_id = RESULT_MEMBER_DS;																		\
+	pack_ds.index_id = member->index;																		\
+	push_fight_result( member->combat_info, &pack_ds, sizeof( result_pack_ds_t ) )
+//碾压
+#define fight_com_pack( member )																			\
+	result_pack_com_t pack_com;																				\
+	pack_com.pack_id = RESULT_MEMBER_COM;																	\
+	pack_com.index_id = member->index;																		\
+	push_fight_result( member->combat_info, &pack_com, sizeof( result_pack_com_t ) )
+//反击开始
+#define fight_ca_pack( member )																				\
+	result_pack_ca_t pack_ca;																				\
+	pack_ca.pack_id = RESULT_MEMBER_CA;																		\
+	pack_ca.index_id = member->index;																		\
+	push_fight_result( member->combat_info, &pack_ca, sizeof( result_pack_ca_t ) )
+
+//反击结束
+#define fight_ca_end_pack( member )																			\
+	result_pack_ca_end_t pack_ca_end;																		\
+	pack_ca_end.pack_id = RESULT_MEMBER_CA_END;																\
+	pack_ca_end.index_id = member->index;																	\
+	push_fight_result( member->combat_info, &pack_ca_end, sizeof( result_pack_ca_end_t ) )
 
 //读文件是否成功
 #define check_read_ret( ret ) if ( 1 != ret ){return -2;}

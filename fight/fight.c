@@ -44,9 +44,11 @@ int main()
 	combat_info.max_second = 500;
 	while ( 0 == combat_info.is_over )
 	{
-		printf( "当前秒:%d\n", combat_info.second );
 		once_second( &combat_info );
 	}
+	FILE *re_file = fopen( "result.dat", "w" );
+	fwrite( combat_info.fight_result, combat_info.result_pos, 1, re_file );
+	fclose( re_file );
 	printf( "战斗结束 is_over = %d\n", combat_info.is_over );
 	return 0;
 }
