@@ -12,7 +12,7 @@ int main()
 	combat_info.result_pos_max = FIGHT_RESULT_CHAR;
 	global_vars.max_ext_buff = 1;
 	global_vars.max_ext_effect = 1;
-	global_vars.max_fight_unit = 1;
+	global_vars.max_fight_unit = 10;
 	global_vars.max_fight_buff = 1;
 	global_vars.max_use_skill = 1;
 	//初始化技能公式
