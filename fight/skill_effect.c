@@ -350,11 +350,23 @@ void skill_effect_19( fight_unit_t *aim_member, int effect_value, int effect_do_
 }
 
 /**
- * 受攻击时怒气增加
+ * 集气速度
  */
 void skill_effect_20( fight_unit_t *aim_member, int effect_value, int effect_do_type, int effect_type )
 {
-	//无用
+	if ( EFFECT_MANY == effect_type )
+	{
+		//离下次出手的时间
+		int next_attack_time = aim_member->next_round - aim_member->combat_info->second;
+		if ( EFFECT_CLEAN == effect_do_type )
+		{
+			effect_value *= -1;
+		}
+		int old_speed = aim_member->base_speed;
+		aim_member->base_speed -= effect_value;
+		int new_time = ( next_attack_time * aim_member->base_speed ) / old_speed;
+		aim_member->next_round = aim_member->combat_info->second + new_time;
+	}
 }
 
 //气血dot效果
