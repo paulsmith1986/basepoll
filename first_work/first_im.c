@@ -1,10 +1,10 @@
-#ifndef YILE_IM_H
-#include "yile_im.h"
-#include "yilenet.h"
+#ifndef FIRST_IM_H
+#include "first_im.h"
+#include "firstnet.h"
 #endif
 
-yile_net_socket *IM_FD_HEAD[ MAX_SERVER_NUM ];
-void init_yile_im()
+first_net_socket *IM_FD_HEAD[ MAX_SERVER_NUM ];
+void init_first_im()
 {
 	memset( IM_FD_HEAD, 0, sizeof( IM_FD_HEAD ) );
 }
@@ -30,7 +30,7 @@ int im_admin_login( int fd, char *join_str )
 }
 
 //连接im服务器
-PHP_FUNCTION ( yile_im_connect )
+PHP_FUNCTION ( first_im_connect )
 {
 	long server_id;
 	char *host;
@@ -42,36 +42,36 @@ PHP_FUNCTION ( yile_im_connect )
 		return;
 	}
 	int re = -1;
-	int fd = yile_net_connect( server_id, host, port, IM_FD_HEAD );
+	int fd = first_net_connect( server_id, host, port, IM_FD_HEAD );
 	if ( fd >= 0 && im_admin_login( fd, join_str ) >= 0 )
 	{
-		yile_net_socket *p = find_yile_net_server_fd( server_id, IM_FD_HEAD );
+		first_net_socket *p = find_first_net_server_fd( server_id, IM_FD_HEAD );
 		re = p->array_index;
 	}
 	else
 	{
 		php_error( E_WARNING, "Can not join im server" );
 	}
-	#ifdef YILE_DEBUG
+	#ifdef FIRST_DEBUG
 	php_printf( "PHP进程加入服务器:%s, port:%d\n", host, port );
 	#endif
 	RETURN_LONG( re );
 }
 
 //检测和聊天服务器是否还连着
-PHP_FUNCTION ( yile_im_ping )
+PHP_FUNCTION ( first_im_ping )
 {
 	long server_id;
 	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "l", &server_id ) == FAILURE )
 	{
 		return;
 	}
-	int re_value = yile_net_ping( server_id, IM_FD_HEAD );
+	int re_value = first_net_ping( server_id, IM_FD_HEAD );
 	RETURN_LONG( re_value );
 }
 
 //生成频道ID
-PHP_FUNCTION ( yile_im_channle )
+PHP_FUNCTION ( first_im_channle )
 {
 	long ch_type, scene_id, sub_scene;
 	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "lll", &ch_type, &scene_id, &sub_scene ) == FAILURE )
@@ -86,7 +86,7 @@ PHP_FUNCTION ( yile_im_channle )
 	RETURN_LONG( ch.channel_id );
 }
 //从IM服务器获取数据
-PHP_FUNCTION ( yile_im_get )
+PHP_FUNCTION ( first_im_get )
 {
 	long do_type, array_index;
 	char *ext_data;
@@ -95,7 +95,7 @@ PHP_FUNCTION ( yile_im_get )
 	{
 		return;
 	}
-	yile_net_socket *p = get_yile_net_server_fd( array_index, IM_FD_HEAD );
+	first_net_socket *p = get_first_net_server_fd( array_index, IM_FD_HEAD );
 	if ( NULL == p )
 	{
 		RETURN_NULL();
@@ -103,14 +103,14 @@ PHP_FUNCTION ( yile_im_get )
 	/*
 	if ( 0 == ext_data_len )
 	{
-		yile_net_send_data( p->socket_fd, do_type, NULL, 0 );
+		first_net_send_data( p->socket_fd, do_type, NULL, 0 );
 	}
 	else
 	{
-		yile_net_send_data( p->socket_fd, do_type, ext_data, ext_data_len );
+		first_net_send_data( p->socket_fd, do_type, ext_data, ext_data_len );
 	}
 	make_result_array( IM_GET_POOL );
-	yile_net_get_data( p->socket_fd, &result_array );
+	first_net_get_data( p->socket_fd, &result_array );
 	if ( 0 == result_array.max_pos )
 	{
 		php_error( E_WARNING, "im_get 获取数据出错" );
@@ -140,7 +140,7 @@ PHP_FUNCTION ( yile_im_get )
 }
 
 //打包战斗数据
-PHP_FUNCTION ( yile_pack_fight )
+PHP_FUNCTION ( first_pack_fight )
 {
 	zval *z_fight_apc;
 	zval *z_attaci_side;
@@ -165,7 +165,7 @@ PHP_FUNCTION ( yile_pack_fight )
 }
 
 //发送消息
-PHP_FUNCTION ( yile_im_send )
+PHP_FUNCTION ( first_im_send )
 {
 	long fd;
 	char *im_data;
@@ -187,7 +187,7 @@ PHP_FUNCTION ( yile_im_send )
 }
 
 //推送协议消息
-PHP_FUNCTION ( yile_im_push )
+PHP_FUNCTION ( first_im_push )
 {
 	long array_index;
 	long protocol_id;
@@ -196,7 +196,7 @@ PHP_FUNCTION ( yile_im_push )
 	{
 		return;
 	}
-	yile_net_socket *p = get_yile_net_server_fd( array_index, IM_FD_HEAD );
+	first_net_socket *p = get_first_net_server_fd( array_index, IM_FD_HEAD );
 	if ( NULL == p )
 	{
 		RETURN_NULL();
@@ -218,7 +218,7 @@ PHP_FUNCTION ( yile_im_push )
 }
 
 //打包二进制数据
-PHP_FUNCTION ( yile_im_pack )
+PHP_FUNCTION ( first_im_pack )
 {
 	long pack_type;
 	zval *pack_data;
@@ -252,7 +252,7 @@ PHP_FUNCTION ( yile_im_pack )
 }
 
 //创建epoll
-PHP_FUNCTION ( yile_create_poll )
+PHP_FUNCTION ( first_create_poll )
 {
 	int re = epoll_create1( EPOLL_CLOEXEC );
 	if ( re < 0 )
@@ -263,7 +263,7 @@ PHP_FUNCTION ( yile_create_poll )
 }
 
 //创建倒计时
-PHP_FUNCTION ( yile_timer_fd )
+PHP_FUNCTION ( first_timer_fd )
 {
 	int timerfd = timerfd_create( CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC );
 	if ( timerfd < 0 )
@@ -274,7 +274,7 @@ PHP_FUNCTION ( yile_timer_fd )
 }
 
 //创建事件类fd
-PHP_FUNCTION ( yile_event_fd )
+PHP_FUNCTION ( first_event_fd )
 {
 	int evtfd = eventfd( 0, EFD_NONBLOCK | EFD_CLOEXEC );
 	if ( evtfd < 0 )
@@ -285,7 +285,7 @@ PHP_FUNCTION ( yile_event_fd )
 }
 
 //设置倒计时
-PHP_FUNCTION ( yile_set_timeout )
+PHP_FUNCTION ( first_set_timeout )
 {
 	long timer_fd;
 	long micro_sec;
@@ -309,7 +309,7 @@ PHP_FUNCTION ( yile_set_timeout )
 }
 
 //等待事件发生
-PHP_FUNCTION ( yile_poll )
+PHP_FUNCTION ( first_poll )
 {
 	long timeout;
 	long epoll_fd;
@@ -317,8 +317,8 @@ PHP_FUNCTION ( yile_poll )
 	{
 		return;
 	}
-	struct epoll_event listen_ev, events[ YILE_POLL_MAX_EVENT ];
-	int event_num = epoll_wait( epoll_fd, events, YILE_POLL_MAX_EVENT, timeout );
+	struct epoll_event listen_ev, events[ FIRST_POLL_MAX_EVENT ];
+	int event_num = epoll_wait( epoll_fd, events, FIRST_POLL_MAX_EVENT, timeout );
 	array_init( return_value );
 	if ( event_num > 0 )
 	{
@@ -331,7 +331,7 @@ PHP_FUNCTION ( yile_poll )
 }
 
 //控制 fd
-PHP_FUNCTION ( yile_poll_ctl )
+PHP_FUNCTION ( first_poll_ctl )
 {
 	long epoll_fd;
 	long fd;
@@ -362,7 +362,7 @@ PHP_FUNCTION ( yile_poll_ctl )
 }
 
 //设置信号
-PHP_FUNCTION ( yile_signal_fd )
+PHP_FUNCTION ( first_signal_fd )
 {
 	zval *mask_signal;
 	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "a", &mask_signal ) == FAILURE )
@@ -398,7 +398,7 @@ PHP_FUNCTION ( yile_signal_fd )
 }
 
 //读数据
-PHP_FUNCTION ( yile_im_read )
+PHP_FUNCTION ( first_im_read )
 {
 	long fd;
 	char *unread_str;
@@ -459,7 +459,7 @@ PHP_FUNCTION ( yile_im_read )
 	int read_data_type = 0;		//读数据类型: 0:头数据  1:包据
 	int need_read = sizeof( packHeadSt );
 	packHeadSt *pack_head;
-	yile_net_byte_array read_array;
+	first_net_byte_array read_array;
 	read_array.data = read_pool;
 	read_array.read_pos = 0;
 	read_array.max_pos = read_pos;
@@ -510,7 +510,7 @@ PHP_FUNCTION ( yile_im_read )
 }
 
 //关闭fd
-PHP_FUNCTION ( yile_im_close )
+PHP_FUNCTION ( first_im_close )
 {
 	long fd;
 	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "l", &fd ) == FAILURE )
@@ -521,7 +521,7 @@ PHP_FUNCTION ( yile_im_close )
 }
 
 //与im互动的socket
-PHP_FUNCTION ( yile_im_socket )
+PHP_FUNCTION ( first_im_socket )
 {
 	char *host;
 	long port;
@@ -530,7 +530,7 @@ PHP_FUNCTION ( yile_im_socket )
 	{
 		return;
 	}
-	int fd = yile_net_connect_do( host, port );
+	int fd = first_net_connect_do( host, port );
 	if ( fd < 0 )
 	{
 		zend_error( E_WARNING, "Can not connect server %s:%d", host, port );
@@ -547,7 +547,7 @@ PHP_FUNCTION ( yile_im_socket )
 }
 
 /*用户登陆/登出数据
-void parse_login_out_data( yile_net_byte_array *result, zval *data_pack )
+void parse_login_out_data( first_net_byte_array *result, zval *data_pack )
 {
 	zval *tmp_result;
 	MAKE_STD_ZVAL( tmp_result );

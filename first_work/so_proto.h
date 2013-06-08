@@ -1,11 +1,11 @@
-#ifndef YILE_NEW_PROTOCOL_H
-#define YILE_NEW_PROTOCOL_H
+#ifndef FIRST_NEW_PROTOCOL_H
+#define FIRST_NEW_PROTOCOL_H
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include "php.h"
-#include "yile_protocol.h"
+#include "first_protocol.h"
 
 //读数字
 #define read_int_from_hash( obj, k )															\
@@ -19,7 +19,7 @@
 	}																							\
 	else																						\
 	{																							\
-		yile_protocol_error( #obj, #k, 1 );														\
+		first_protocol_error( #obj, #k, 1 );													\
 	}
 
 //读数字
@@ -34,7 +34,7 @@
 	}																							\
 	else																						\
 	{																							\
-		yile_protocol_error( #obj, #k, 1 );														\
+		first_protocol_error( #obj, #k, 1 );													\
 	}
 
 //读数字
@@ -73,7 +73,7 @@
 	}																							\
 	else																						\
 	{																							\
-		yile_protocol_error( #obj, #k, 1 );														\
+		first_protocol_error( #obj, #k, 1 );													\
 	}
 
 //读定长字符
@@ -88,7 +88,7 @@
 	}																							\
 	else																						\
 	{																							\
-		yile_protocol_error( #obj, #k, 1 );														\
+		first_protocol_error( #obj, #k, 1 );													\
 	}
 
 //读字节流
@@ -103,7 +103,7 @@
 	}																							\
 	else																						\
 	{																							\
-		yile_protocol_error( #obj, #k, 1 );														\
+		first_protocol_error( #obj, #k, 1 );													\
 	}
 
 //读字节流
@@ -120,13 +120,13 @@
 	{																							\
 		if ( IS_ARRAY != Z_TYPE_PP( tmp_data ) )												\
 		{																						\
-			yile_protocol_error( #obj, #k, 2 );													\
+			first_protocol_error( #obj, #k, 2 );												\
 		}																						\
 		new_struct_hash = Z_ARRVAL_P( *tmp_data );												\
 	}																							\
 	else																						\
 	{																							\
-		yile_protocol_error( #obj, #k, 1 );														\
+		first_protocol_error( #obj, #k, 1 );													\
 	}
 
 //读list
@@ -135,20 +135,20 @@
 	{																							\
 		if ( IS_ARRAY != Z_TYPE_PP( tmp_data ) )												\
 		{																						\
-			yile_protocol_error( #obj, #k, 2 );													\
+			first_protocol_error( #obj, #k, 2 );												\
 		}																						\
 		new_list_hash = Z_ARRVAL_P( *tmp_data );												\
 	}																							\
 	else																						\
 	{																							\
-		yile_protocol_error( #obj, #k, 1 );														\
+		first_protocol_error( #obj, #k, 1 );													\
 	}
 
 //判断是否是数组
 #define protocol_list_is_array( z_item, list_name )												\
 	if( IS_ARRAY != Z_TYPE_PP( z_item ) )														\
 	{																							\
-		yile_protocol_error( NULL, list_name, 3 );												\
+		first_protocol_error( NULL, list_name, 3 );												\
 	}
 
 #define set_data_pointer( pack, size, pointer, type )											\
@@ -169,7 +169,7 @@
 
 
 //php数组for循环
-#define yile_loop_arr( arr, point, item ) zend_hash_internal_pointer_reset_ex( arr, &point ); zend_hash_get_current_data_ex( arr, (void**) &item, &point ) == SUCCESS; zend_hash_move_forward_ex( arr, &point )
+#define first_loop_arr( arr, point, item ) zend_hash_internal_pointer_reset_ex( arr, &point ); zend_hash_get_current_data_ex( arr, (void**) &item, &point ) == SUCCESS; zend_hash_move_forward_ex( arr, &point )
 
 /**
  * 解析数据时出错
@@ -179,7 +179,7 @@ void parse_data_error( char *type );
 /**
  * 报错
  */
-void yile_protocol_error( char *proto, char *key_name, int type );
+void first_protocol_error( char *proto, char *key_name, int type );
 
 /**
  * 将字节流写入result_pack

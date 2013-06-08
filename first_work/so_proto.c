@@ -1,8 +1,8 @@
-#include "yile_proto.h"
+#include "first_proto.h"
 /**
  * 报错
  */
-void yile_protocol_error( char *proto, char *key_name, int type )
+void first_protocol_error( char *proto, char *key_name, int type )
 {
 	switch ( type )
 	{
@@ -36,9 +36,9 @@ void php_write_bytes( char *str, protocol_result_t *re_pack, int len )
 	{
 		php_error( E_ERROR, "byte数据长度超过协议最大支持量!\n" );
 	}
-	yile_result_push_data( re_pack, &bin_len, sizeof( bin_len ) );
+	first_result_push_data( re_pack, &bin_len, sizeof( bin_len ) );
 	if ( len > 0 )
 	{
-		yile_result_push_data( re_pack, str, bin_len );
+		first_result_push_data( re_pack, str, bin_len );
 	}
 }

@@ -1,7 +1,7 @@
-#ifndef YILE_IM_H
-#define YILE_IM_H
-#include "yile.h"
-#include "yilenet.h"
+#ifndef FIRST_IM_H
+#define FIRST_IM_H
+#include "first.h"
+#include "firstnet.h"
 #include "fight_pack.h"
 #include "proto_so.h"
 #include <signal.h>
@@ -14,7 +14,7 @@
 #define PHP_ROLE_CHAR					MAX_PHP_ROLES * sizeof( int )//PHP发送多个玩家数据的时候,缓存数据大小
 #define IM_PING		10000									//心跳包
 #define IM_GET_POOL	1024									//im_get数据缓存大小
-#define YILE_POLL_MAX_EVENT	32								//最大一次处理事件数
+#define FIRST_POLL_MAX_EVENT	32								//最大一次处理事件数
 
 #pragma pack(2)
 typedef struct coordSt{
@@ -70,7 +70,7 @@ typedef struct CHANNEL_ID
 int im_admin_login( int fd, char *join_str );
 
 //初始化
-void init_yile_im();
+void init_first_im();
 
 //打包战斗成员数据
 void pack_fight_member( zval *member_arr, char *pack_str, int *beg_pos );

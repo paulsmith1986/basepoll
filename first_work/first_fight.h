@@ -1,10 +1,10 @@
-#ifndef YILE_FIGHT_FUNC_H
-#define YILE_FIGHT_FUNC_H
+#ifndef FIRST_FIGHT_FUNC_H
+#define FIRST_FIGHT_FUNC_H
 #include "php.h"
 #include "standard/php_string.h"
 #include "ext/standard/php_smart_str.h"
-#include "yile.h"
-#include "yile_fight.h"
+#include "first.h"
+#include "first_fight.h"
 #include "skill_effect.h"
 #include "struct_pool.h"
 #include "skill_formula.h"

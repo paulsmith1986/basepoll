@@ -4,7 +4,7 @@ global_t FIGHT_GLOBAL;
 /**
  * 战斗主入口
  */
-PHP_FUNCTION ( yile_fight )
+PHP_FUNCTION ( first_fight )
 {
 	zval *z_attack;			//传入的攻击方
 	zval *z_defence;		//传入的防守方

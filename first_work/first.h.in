@@ -1,5 +1,5 @@
-#ifndef YILE_H
-#define YILE_H
+#ifndef FIRST_H
+#define FIRST_H
 
 /* Commonly needed C library headers. */
 #include <errno.h>
@@ -15,64 +15,11 @@
 #include "hash/php_hash.h"
 #include "hash/php_hash_md.h"
 #include "standard/php_string.h"
-#include "ext/standard/php_smart_str.h"
-#include "ext/json/php_json.h"
 #include "standard/php_rand.h"
-#include "proto_so.h"
-#define HOST_KEY "h_u*a&n^g%s?z_"			//echo strrev( substr( md5( 'h_u*a&n^g%s?z_qq.com' ), 0, 16 ) );
-#define HOST_STR_LEN 200
-#define HOST_NUM 3							//域名个数
-#define HOST_STEP 1000						//每多少次检查一次host
-#define DIRTY_BUFF 1000						//脏字库hash桶长度
-#define DIRTY_CLEAN 2000					//脏字库清理之后的长度
 
-#define FIGHT_DATA_RE_TYPE				1	//战报保存格式 1:字符串 2:数组  3:二进制
-#define YILE_VERSION	"{$yile_version}"	//版本信息
+#define FIRST_VERSION	"{$first_version}"	//版本信息
 
-#define YILE_SWITCH_DEBUG					//调试开关
-#define YILE_SWITCH_DEBUG_PROTOCOL			//协议调试开关
+#define FIRST_SWITCH_DEBUG					//调试开关
 
-//脏字列表
-typedef struct dirty_list dirty_list;
-struct dirty_list{
-	char			*dirty;					//完全脏字
-	int				dirty_len;				//长度
-	dirty_list		*next;					//下一链
-};
 
-//hash桶
-typedef struct dirty_word dirty_word;
-struct dirty_word{
-	char			head_word[ 4 ];			//头文字
-	dirty_list		*head;					//脏字头
-	dirty_word		*next;					//下一桶
-};
-dirty_word *find_dirty_word( char *tmp_char, dirty_word *tmp_head );
-
-//php数组key简写
-#define php_key_arg( key ) key , sizeof( key )
-
-extern dirty_word *dirty_word_array[];		//定义脏字桶
-
-ZEND_BEGIN_MODULE_GLOBALS( yile_new )
-int	check_count;
-int	is_joining;		//是否正在加入聊天服务器中
-int	IS_DIRTY_INIT;		//是否正在加入聊天服务器中
-char *yile_domain;		//服务器域名
-char *yile_domain_key;		//服务器域名的key
-ZEND_END_MODULE_GLOBALS( yile_new )
-
-ZEND_EXTERN_MODULE_GLOBALS( yile_new )
-
-#ifdef ZTS
-# define YILE_G(v) TSRMG(yile_new_globals_id, zend_yile_new_globals *, v)
-#else
-# define YILE_G(v)( yile_new_globals.v )
-#endif
-
-//生成一个随机数
-int ch_rand( int min_num, int max_num );
-
-//判断一个utf-8字符的长度
-//int utf8_char_len( unsigned char ord );
 #endif
