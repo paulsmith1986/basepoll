@@ -242,7 +242,7 @@ void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill )
 	#ifdef FIRST_DEBUG
 	if ( skill_info->skill_id > 0 )
 	{
-		printf( "使用技能 %d 【%s】 攻击次数:%d \n", skill_info->skill_id, debug_skill_name( skill_info->skill_id ), skill_info->attack_num );
+		printf( "使用技能 %d 【%s】Lv: %d 攻击次数:%d \n", skill_info->skill_id, debug_skill_name( skill_info->skill_id ), attack_member->skill_level, skill_info->attack_num );
 	}
 	else
 	{
@@ -440,7 +440,7 @@ void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill )
 							#endif
 							if ( is_rand( attack_back_ration ) )
 							{
-								counter_attack( attack_member, aim_member );
+								counter_attack( aim_member, attack_member );
 							}
 						}
 					}
@@ -455,7 +455,7 @@ void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill )
 				#endif
 				if ( is_rand( attack_back_ration ) )
 				{
-					counter_attack( attack_member, aim_member );
+					counter_attack( aim_member, attack_member );
 				}
 			}
 			//技能不攻击..但也要判断命中后的状态

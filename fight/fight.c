@@ -49,7 +49,7 @@ int main()
 	FILE *re_file = fopen( "result.dat", "w" );
 	fwrite( combat_info.fight_result, combat_info.result_pos, 1, re_file );
 	fclose( re_file );
-	printf( "战斗结束 is_over = %d\n", combat_info.is_over );
+	printf( "战斗结束 is_over = %d second:%d\n", combat_info.is_over, combat_info.second );
 	return 0;
 }
 
