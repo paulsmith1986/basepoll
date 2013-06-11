@@ -22,7 +22,13 @@ PHP_RINIT_FUNCTION(first_work);
 PHP_RSHUTDOWN_FUNCTION(first_work);
 PHP_MINFO_FUNCTION(first_work);
 
-PHP_FUNCTION(confirm_first_work_compiled);
+PHP_FUNCTION(first);
+PHP_FUNCTION(first_poll);
+PHP_FUNCTION(first_timer_fd);
+PHP_FUNCTION(first_event_fd);
+PHP_FUNCTION(first_set_timeout);
+PHP_FUNCTION(first_signal_fd);
+PHP_FUNCTION(first_socket_fd);
 
 #ifdef ZTS
 #define FIRST_WORK_G(v) TSRMG(first_work_globals_id, zend_first_work_globals *, v)

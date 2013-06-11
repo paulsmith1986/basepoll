@@ -2,15 +2,18 @@
 #include "config.h"
 #endif
 
-#include "php.h"
-#include "php_ini.h"
-#include "ext/standard/info.h"
-#include "php_first_work.h"
+#include "first.h"
 
 static int le_first_work;
 
 const zend_function_entry first_work_functions[] = {
-	PHP_FE(confirm_first_work_compiled,	NULL)		/* For testing, remove later. */
+	PHP_FE( first, NULL )
+	PHP_FE( first_poll, NULL )
+	PHP_FE( first_timer_fd, NULL )
+	PHP_FE( first_event_fd, NULL )
+	PHP_FE( first_set_timeout, NULL )
+	PHP_FE( first_signal_fd, NULL )
+	PHP_FE( first_socket_fd, NULL )
 	{NULL, NULL, NULL}	/* Must be the last line in first_work_functions[] */
 };
 
@@ -41,6 +44,12 @@ PHP_MINIT_FUNCTION(first_work)
 	/* If you have INI entries, uncomment these lines
 	REGISTER_INI_ENTRIES();
 	*/
+	REGISTER_LONG_CONSTANT( "FIRST_SOCKET_CLOSE", 0, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT( "FIRST_SOCKET_DATA", 1, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT( "FIRST_SOCKET_WRITE", 2, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT( "FIRST_EVENT_WAKEUP", 3, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT( "FIRST_TIME_UP", 4, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT( "FIRST_SIGNAL", 5, CONST_CS | CONST_PERSISTENT);
 	return SUCCESS;
 }
 
@@ -68,7 +77,7 @@ PHP_MINFO_FUNCTION(first_work)
 	php_info_print_table_header(2, "first_work support", "enabled");
 	php_info_print_table_end();
 }
-PHP_FUNCTION(confirm_first_work_compiled)
+PHP_FUNCTION(first)
 {
 	char *arg = NULL;
 	int arg_len, len;

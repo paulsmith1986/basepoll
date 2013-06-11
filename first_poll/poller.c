@@ -175,7 +175,7 @@ void FirstPoller::send_data( fd_struct_t *fd_info, void *send_re, uint32_t total
 	//之前还有一些没发出去
 	if ( fd_info->un_send_len > 0 )
 	{
-		char *un_send_char = (char *)realloc( fd_info->un_send, total_send );
+		char *un_send_char = (char *)realloc( fd_info->un_send, fd_info->un_send_len + total_send );
 		memcpy( un_send_char + fd_info->un_send_len, send_re, total_send );
 		fd_info->un_send_len += total_send;
 		fd_info->un_send = un_send_char;
