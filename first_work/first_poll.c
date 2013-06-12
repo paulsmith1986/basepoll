@@ -168,6 +168,7 @@ PHP_FUNCTION ( first_poll )
 				{
 					if ( events[ i ].events & EPOLLRDHUP )
 					{
+						printf( "close fd:%d\n", events[ i ].events );
 						first_close_fd( fd_struct );
 						event_type = 0;
 						fd_struct->is_return = 0;
@@ -601,7 +602,10 @@ void first_on_socket_read( first_poll_struct_t *fd_info, protocol_packet_t *data
 			add_assoc_long( tmp_result, "cookie_role_id", 0 );
 			add_assoc_long( tmp_result, "cookie_fd", req_data->fd );
 			add_assoc_long( tmp_result, "cookie_fd_id", req_data->fd_id );
-			fd_info->is_return = first_im_proxy_pack( (protocol_packet_t*)req_data->data, tmp_result );
+			protocol_packet_t tmp_pack;
+			tmp_pack.data = req_data->data->bytes;
+			tmp_pack.max_pos = req_data->data->len;
+			fd_info->is_return = first_im_proxy_pack( &tmp_pack, tmp_result );
 		}
 		break;
 	}
@@ -614,7 +618,19 @@ int first_im_proxy_pack( protocol_packet_t *proxy_pack, zval *tmp_result )
 {
 	packet_head_t *pack_head = ( packet_head_t* )proxy_pack->data;
 	proxy_pack->pos = sizeof( packet_head_t );
-	php_unpack_protocol_data( pack_head->pack_id, proxy_pack, tmp_result );
+	switch( pack_head->pack_id )
+	{
+		case 101:
+		{
+			read_account_new( proxy_pack, tmp_result );
+		}
+		break;
+		case 103:
+		{
+			read_account_login( proxy_pack, tmp_result );
+		}
+		break;
+	}
 	//出错的情况判断
 	if ( 0 == proxy_pack->pos )
 	{

@@ -14,16 +14,18 @@ void ImHandle::on_socket_fd( fd_struct_t *fd_info, protocol_packet_t *read_packe
 			return;
 		}
 		proto_bin_t request_pack;
-		request_pack.len = read_packet->pos;
+		request_pack.len = read_packet->max_pos;
 		request_pack.bytes = read_packet->data;
+		printf( "data len:%d\n", read_packet->max_pos );
 		//还未登录的用户
 		if ( NULL == fd_info->ext_data )
 		{
 			//未登录前.只能发 101 注册 或者 103 登录 包
-			if ( 101 != pack_head->pack_id || 103 != pack_head->pack_id )
+			if ( 101 != pack_head->pack_id && 103 != pack_head->pack_id )
 			{
 				return;
 			}
+			printf( "proxy!\n" );
 			proto_fd_proxy_t proxy_pack;
 			proxy_pack.fd = fd_info->fd;
 			proxy_pack.fd_id = add_anonymity( proxy_pack.fd );
@@ -46,6 +48,7 @@ void ImHandle::on_socket_fd( fd_struct_t *fd_info, protocol_packet_t *read_packe
 		//php和server交互包 20001包可以通过.其它包必须是SOCKET_TYPE_PHP才能通过
 		if ( pack_head->pack_id > 20000 )
 		{
+			printf( "pack_id:%d\n", pack_head->pack_id );
 			if ( fd_info->socket_type != SOCKET_TYPE_PHP_FPM && 20001 != pack_head->pack_id )
 			{
 				close_fd_info( fd_info );

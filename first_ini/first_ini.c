@@ -107,7 +107,7 @@ void FirstIniReader::read_ini_line( const char* line_str )
 		bool is_break = false;
 		switch ( j )
 		{
-			case 32:
+			case 32:	//空格
 			{
 				if ( read_type <= 2 )
 				{
@@ -115,6 +115,9 @@ void FirstIniReader::read_ini_line( const char* line_str )
 				}
 				read_char[ read_pos++ ] = j;
 			}
+			break;
+			case 13:	//回车
+				is_break = true;
 			break;
 			case '[':
 				if ( 0 == read_pos )

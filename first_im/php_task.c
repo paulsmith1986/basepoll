@@ -21,7 +21,7 @@ void request_fd_proxy_re( fd_struct_t *fd_info, proto_fd_proxy_re_t *req_pack )
  */
 void request_php_join_server( fd_struct_t *fd_info, proto_php_join_server_t *req_pack )
 {
-	if ( 0 != strcpy( SUPER_KEY, req_pack->join_key ) )
+	if ( 0 != strncmp( SUPER_KEY, req_pack->join_key, strlen( SUPER_KEY ) ) )
 	{
 		close_fd_info( fd_info );
 		return;

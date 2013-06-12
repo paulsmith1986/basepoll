@@ -62,7 +62,7 @@ int main( int argc, char *argv[] )
 	const char *bind_ip = conf_ini.read_ini_char( "host", "0.0.0.0" );
 	int port = conf_ini.read_ini_int( "port", 6666 );
 	SUPER_KEY = strdup( conf_ini.read_ini_char( "super_key" ) );
-	LOGIN_KEY = strdup( conf_ini.read_ini_char( "super_key" ) );
+	LOGIN_KEY = strdup( conf_ini.read_ini_char( "login_key" ) );
 	int main_fd = start_net_service( bind_ip, port );
 	assert( main_fd >= 0 );
 	const char *err_log_path = conf_ini.read_ini_char( "log" );

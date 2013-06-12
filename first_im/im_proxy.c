@@ -29,6 +29,7 @@ void ImProxy::add( fd_struct_t *fd_info )
 		return;
 	}
 	im_proxy_map_[ fd_info->fd ] = time( 0 );
+	im_proxy_list_.push_back( fd_info );
 }
 
 /**
@@ -39,6 +40,7 @@ void ImProxy::check_is_php_fd( fd_struct_t *fd_info )
 	im_proxy_map_t::iterator it = im_proxy_map_.find( fd_info->fd );
 	if ( it != im_proxy_map_.end() )
 	{
+		OUT_ERROR << "Php process exist!" << fin;
 		im_proxy_map_.erase( it );
 	}
 	im_proxy_list_t::iterator list_it;

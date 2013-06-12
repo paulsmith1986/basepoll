@@ -175,9 +175,14 @@
 	if ( pack->pos + size > pack->max_pos )														\
 	{																							\
 		parse_data_error( #type );																\
+		pack->pos = 0;																			\
+		return;																					\
 	}																							\
-	pointer = ( type* )&pack->data[ pack->pos ];												\
-	pack->pos += size
+	else																						\
+	{																							\
+		pointer = ( type* )&pack->data[ pack->pos ];											\
+		pack->pos += size;																		\
+	}
 
 #define php_result_copy( re_pack, des, len )													\
 	if ( re_pack->pos + len > re_pack->max_pos )												\
