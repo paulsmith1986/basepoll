@@ -101,7 +101,7 @@ PHP_FUNCTION ( first_signal_fd )
 	RETURN_LONG( sfd );
 }
 
-//等待事件发生
+//创建socket_fd
 PHP_FUNCTION ( first_socket_fd )
 {
 	char *host;
@@ -115,10 +115,34 @@ PHP_FUNCTION ( first_socket_fd )
 	int fd = first_socket_connect( host, port );
 	if ( fd < 0 )
 	{
-		zend_error( E_ERROR, "Can not join server %s: %d\n", host, port );
+		zend_error( E_ERROR, "Can not connect server %s: %d\n", host, port );
 	}
 	first_poll_add( fd, FD_TYPE_SOCKET );
 	RETURN_LONG( fd );
+}
+
+//加入服务器
+PHP_FUNCTION ( first_join_server )
+{
+	long fd;
+	char *join_key;
+	int join_key_len;
+	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "ls", &fd, &join_key, &join_key_len ) == FAILURE )
+	{
+		return;
+	}
+	first_poll_struct_t *fd_info = find_fd_info( fd );
+	if ( NULL == fd_info )
+	{
+		zend_error( E_WARNING, "Can not find fdstruct\n" );
+		RETURN_FALSE;
+	}
+	proto_php_join_server_t join_pack;
+	join_pack.join_key = join_key;
+	join_pack.socket_type = 1;
+	encode_php_join_server( send_pack, &join_pack );
+	protocol_send_pack( fd_info, send_pack );
+	RETURN_TRUE;
 }
 
 //等待事件发生
@@ -136,7 +160,7 @@ PHP_FUNCTION ( first_poll )
 			MAKE_STD_ZVAL( tmp_result );
 			array_init( tmp_result );
 			first_poll_struct_t *fd_struct = (first_poll_struct_t*)events[ i ].data.ptr;
-			add_assoc_long( tmp_result, "fd", fd_struct->fd );
+			fd_struct->is_return = 1;
 			int event_type;
 			switch ( fd_struct->fd_type )
 			{
@@ -146,6 +170,7 @@ PHP_FUNCTION ( first_poll )
 					{
 						first_close_fd( fd_struct );
 						event_type = 0;
+						fd_struct->is_return = 0;
 					}
 					else
 					{
@@ -160,6 +185,7 @@ PHP_FUNCTION ( first_poll )
 						if ( events[ i ].events & EPOLLOUT )
 						{
 							first_on_socket_write( fd_struct );
+							fd_struct->is_return = 0;
 							event_type = 2;
 						}
 					}
@@ -181,8 +207,16 @@ PHP_FUNCTION ( first_poll )
 					fprintf( stderr, "Unkown fd type.\n" );
 				break;
 			}
-			add_assoc_long( tmp_result, "event_type", event_type );
-			add_next_index_zval( return_value, tmp_result );
+			if ( fd_struct->is_return )
+			{
+				add_assoc_long( tmp_result, "fd", fd_struct->fd );
+				add_assoc_long( tmp_result, "event_type", event_type );
+				add_next_index_zval( return_value, tmp_result );
+			}
+			else
+			{
+				zval_dtor( tmp_result );
+			}
 		}
 		if ( NULL != CLOSE_FD_LIST )
 		{
@@ -216,6 +250,35 @@ void first_poll_add( int fd, first_poll_type fd_type )
 		FIRST_POOL_FD_LIST[ index ] = fd_info;
 	}
 	first_update_event( fd_info, EPOLL_CTL_ADD, READ_EVENT );
+}
+
+/**
+ * 根据fd查找fd_struct
+ */
+first_poll_struct_t *find_fd_info( int fd )
+{
+	int index = fd % FIRST_POLL_MAX_EVENT;
+	if ( NULL == FIRST_POOL_FD_LIST[ index ] )
+	{
+		return NULL;
+	}
+	if ( FIRST_POOL_FD_LIST[ index ]->fd == fd )
+	{
+		return FIRST_POOL_FD_LIST[ index ];
+	}
+	else
+	{
+		first_poll_struct_t *tmp_info = FIRST_POOL_FD_LIST[ index ]->next;
+		while ( NULL != tmp_info )
+		{
+			if ( tmp_info->fd == fd )
+			{
+				break;
+			}
+			tmp_info = tmp_info->next;
+		}
+		return tmp_info;
+	}
 }
 
 /**
@@ -412,6 +475,7 @@ void read_socket_data( first_poll_struct_t *fd_info, zval *tmp_result )
 			{
 				first_close_fd( fd_info );
 			}
+			fd_info->is_return = 0;
 			break;
 		}
 		else if ( ret < 0 )
@@ -437,16 +501,9 @@ void read_socket_data( first_poll_struct_t *fd_info, zval *tmp_result )
 						fd_info->un_read_pack = un_read;
 					}
 				}
-				break ;
 			}
-			else if ( errno == EINTR )
-			{
-				continue;
-			}
-			else		//不知道什么错误
-			{
-				break;
-			}
+			fd_info->is_return = 0;
+			break;
 		}
 		else
 		{
@@ -467,6 +524,7 @@ void read_socket_data( first_poll_struct_t *fd_info, zval *tmp_result )
 						//超过最大支持的数据包
 						if ( new_size > MAX_READ_DATA )
 						{
+							fd_info->is_return = 0;
 							first_close_fd( fd_info );
 							return;
 						}
@@ -481,7 +539,7 @@ void read_socket_data( first_poll_struct_t *fd_info, zval *tmp_result )
 				if( 0 == need_read || read_packet->pos > sizeof( packet_head_t ) )
 				{
 					read_packet->pos = sizeof( packet_head_t );
-					first_on_socket_read( read_packet, tmp_result );
+					first_on_socket_read( fd_info, read_packet, tmp_result );
 					//如果不是栈内内存
 					if ( read_packet != &stack_read_packet )
 					{
@@ -506,10 +564,66 @@ void read_socket_data( first_poll_struct_t *fd_info, zval *tmp_result )
 /**
  * 数据到达
  */
-void first_on_socket_read( protocol_packet_t *data_pack, zval *tmp_result )
+void first_on_socket_read( first_poll_struct_t *fd_info, protocol_packet_t *data_pack, zval *tmp_result )
 {
+	protocol_result_t read_result_pool;
+	read_result_pool.pos = 0;
+	read_result_pool.error_code = 0;
 	packet_head_t *pack_head = ( packet_head_t* )data_pack->data;
-	php_unpack_protocol_data( pack_head->pack_id, &data_pack->data[ sizeof( packet_head_t ) ], tmp_result );
+	switch( pack_head->pack_id )
+	{
+		case 1: //带角色id转发数据包
+		{
+			char char_role_proxy[ PROTO_SIZE_ROLE_PROXY ];
+			read_result_pool.str = char_role_proxy;
+			read_result_pool.max_pos = sizeof( char_role_proxy );
+			proto_role_proxy_t *req_data = read_role_proxy( data_pack, &read_result_pool );
+			if( read_result_pool.error_code > 0 )
+			{
+				fd_info->is_return = 0;
+				return;
+			}
+			add_assoc_long( tmp_result, "cookie_role_id", req_data->role_id );
+			fd_info->is_return = first_im_proxy_pack( (protocol_packet_t*)req_data->data, tmp_result );
+		}
+		break;
+		case 2: //不带角色id转发数据包
+		{
+			char char_fd_proxy[ PROTO_SIZE_FD_PROXY ];
+			read_result_pool.str = char_fd_proxy;
+			read_result_pool.max_pos = sizeof( char_fd_proxy );
+			proto_fd_proxy_t *req_data = read_fd_proxy( data_pack, &read_result_pool );
+			if( read_result_pool.error_code > 0 )
+			{
+				fd_info->is_return = 0;
+				return;
+			}
+			add_assoc_long( tmp_result, "cookie_role_id", 0 );
+			add_assoc_long( tmp_result, "cookie_fd", req_data->fd );
+			add_assoc_long( tmp_result, "cookie_fd_id", req_data->fd_id );
+			fd_info->is_return = first_im_proxy_pack( (protocol_packet_t*)req_data->data, tmp_result );
+		}
+		break;
+	}
+}
+
+/**
+ * 转发数据包
+ */
+int first_im_proxy_pack( protocol_packet_t *proxy_pack, zval *tmp_result )
+{
+	packet_head_t *pack_head = ( packet_head_t* )proxy_pack->data;
+	proxy_pack->pos = sizeof( packet_head_t );
+	php_unpack_protocol_data( pack_head->pack_id, proxy_pack, tmp_result );
+	//出错的情况判断
+	if ( 0 == proxy_pack->pos )
+	{
+		return 0;
+	}
+	else
+	{
+		return 1;
+	}
 }
 
 /**

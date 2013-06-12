@@ -1,0 +1,84 @@
+#ifndef FIRST_IM_HEAD
+#define FIRST_IM_HEAD
+#include <map>
+#include <list>
+#include <vector>
+#include "first_poll.h"
+#include "poller.h"
+#include "first_protocol.h"
+
+#define ROLE_NAME_LEN				20						//角色名长度
+
+//调试开关
+#define FIRST_DEBUG_SWITCH
+#define CLIENT_MAX_REQEUST			16 * 1024				//客户端最大能发送的数据量
+#define SOCKET_TYPE_PHP_FPM			1						//socket连接类型 php_fpm
+//版本号
+#define	VERSION						"{$im_version}"
+
+//场景cell描述
+struct scene_apc_pack{
+	uint16_t				cell_num;						//格子数量
+	uint16_t				max_width;						//最大宽度
+	uint16_t				cell_width;						//格子宽度
+};
+//场景的静态数据
+typedef map< uint16_t, scene_apc_pack* > scene_apc;
+
+//人物所在的格子
+typedef unsigned char cell_no_t;
+
+//地图移动点的个数
+typedef unsigned char coord_num_t;
+
+//频道数据类型
+union channel_id_u{
+	uint64_t channel_id;
+	struct{
+		uint32_t sub_id;
+		uint16_t scene_id;
+		char msg_time;			//说话间隔(返回值里用到)
+		char ch_type;			//场景类型
+	};
+};
+
+typedef map< int, fd_struct_t* >role_list_t;
+
+//用户ID, fd_struct_t
+typedef std::map< int, fd_struct_t* > scene_t;
+
+//<场景ID, 场景成员>
+typedef std::map< uint64_t, scene_t* > scene_map_t;
+
+//频道成员
+typedef std::map< int, fd_struct_t* > channel_t;
+
+//<频道ID, 频道成员>
+typedef std::map< uint64_t, channel_t* > channel_map_t;
+
+//用户加入的频道
+typedef std::list< uint64_t > join_list_t;
+
+//用户信息
+struct role_struct_t;
+
+//用户信息
+struct role_struct_t {
+	int						role_id;						//用户ID
+	uint32_t				login_time;						//登录时间
+	uint64_t				move_map;						//移动的场景地图
+	uint32_t				model;							//模型
+	uint32_t				start_coord;					//在地图上坐标
+	uint32_t				end_coord;						//结束坐标
+	uint32_t				last_move_time;					//上一次移动的时间
+	uint32_t				move_check;						//检验移动数据包
+	char					role_name[ ROLE_NAME_LEN ];		//用户昵称
+	join_list_t*			join_list;						//加入的聊天频道
+	role_struct_t*			next;							//用户池链表
+	int16_t					screen_width;					//用户屏幕宽度
+	unsigned char			role_lv;						//人物等级
+	cell_no_t				now_cell;						//当前在场景中的格子
+	cell_no_t				beg_cell;						//在场景中的格子编号(起)
+	cell_no_t				end_cell;						//在场景中的格子编号(终)
+};
+#endif

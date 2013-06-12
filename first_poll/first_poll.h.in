@@ -66,6 +66,7 @@ enum fdType {
 	FD_TYPE_TIMER,			//时间fd
 	FD_TYPE_SIGNAL			//信号fd
 };
+
 class FirstPoller;
 //每一个连接的详细信息
 struct fd_struct_t{
@@ -74,9 +75,10 @@ struct fd_struct_t{
 	char*					un_send;						//未发出消息内容
 	protocol_packet_t*		un_read_pack;					//未处理完的数据包
 	void*					ext_data;						//扩展数据
+	FirstPoller*			poller;							//连接属于哪个poller管理
 	fdState					status;							//连接状态
 	fdType					fd_type;						//连接类型
-	FirstPoller*			poller;							//连接属于哪个poller管理
+	uint8_t					socket_type;					//socket类型
 };
 
 //设置为非阻塞状态函数

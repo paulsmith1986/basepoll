@@ -29,6 +29,7 @@ PHP_FUNCTION(first_event_fd);
 PHP_FUNCTION(first_set_timeout);
 PHP_FUNCTION(first_signal_fd);
 PHP_FUNCTION(first_socket_fd);
+PHP_FUNCTION(first_join_server);
 
 #ifdef ZTS
 #define FIRST_WORK_G(v) TSRMG(first_work_globals_id, zend_first_work_globals *, v)

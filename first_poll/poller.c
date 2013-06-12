@@ -123,13 +123,11 @@ void FirstPoller::new_connection( fd_struct_t *fd_info )
 fd_struct_t* FirstPoller::create_fd_struct( int fd, fdType fd_type )
 {
 	fd_struct_t *tmp_info = fd_pool_.get();
+	memset( tmp_info, 0, sizeof( fd_struct_t ) );
 	tmp_info->fd_type = fd_type;
 	tmp_info->fd = fd;
-	tmp_info->un_send_len = 0;
-	tmp_info->un_read_pack = NULL;
-	tmp_info->un_send = NULL;
-	tmp_info->ext_data = NULL;
 	tmp_info->poller = this;
+	tmp_info->socket_type = 0;
 	set_fd_status( tmp_info, FD_STATE_IDLE );
 	fd_list_[ fd ] = tmp_info;
 	return tmp_info;

@@ -46,7 +46,7 @@ void first_result_push_data( protocol_result_t *result, void *data, int len )
 //往结果集写数字串
 void write_UTF( protocol_result_t *re_pack, char *re_str )
 {
-	string_len_t str_len = strlen( re_str );
+	string_len_t str_len = NULL == re_str ? 0 : strlen( re_str );
 	first_result_push_data( re_pack, &str_len, sizeof( string_len_t ) );
 	if ( str_len > 0 )
 	{
@@ -122,6 +122,10 @@ char *read_fix_char( protocol_packet_t *re_pack, protocol_result_t *data_pool, s
  */
 void write_fix_char( char *data, char *result, int len )
 {
+	if ( NULL == data )
+	{
+		return;
+	}
 	string_len_t str_len = strlen( data );
 	if ( str_len >= len )
 	{

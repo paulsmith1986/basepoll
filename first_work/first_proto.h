@@ -20,6 +20,8 @@
 	else																						\
 	{																							\
 		first_protocol_error( #obj, #k, 1 );													\
+		all_result->error_code = PROTO_PACK_ERROR;												\
+		return;																					\
 	}
 
 //读数字
@@ -35,6 +37,8 @@
 	else																						\
 	{																							\
 		first_protocol_error( #obj, #k, 1 );													\
+		all_result->error_code = PROTO_PACK_ERROR;												\
+		return;																					\
 	}
 
 //读数字
@@ -74,6 +78,8 @@
 	else																						\
 	{																							\
 		first_protocol_error( #obj, #k, 1 );													\
+		all_result->error_code = PROTO_PACK_ERROR;												\
+		return;																					\
 	}
 
 //读定长字符
@@ -89,6 +95,8 @@
 	else																						\
 	{																							\
 		first_protocol_error( #obj, #k, 1 );													\
+		all_result->error_code = PROTO_PACK_ERROR;												\
+		return;																					\
 	}
 
 //读字节流
@@ -104,6 +112,8 @@
 	else																						\
 	{																							\
 		first_protocol_error( #obj, #k, 1 );													\
+		all_result->error_code = PROTO_PACK_ERROR;												\
+		return;																					\
 	}
 
 //读字节流
@@ -121,12 +131,16 @@
 		if ( IS_ARRAY != Z_TYPE_PP( tmp_data ) )												\
 		{																						\
 			first_protocol_error( #obj, #k, 2 );												\
+			all_result->error_code = PROTO_PACK_ERROR;											\
+			return;																				\
 		}																						\
 		new_struct_hash = Z_ARRVAL_P( *tmp_data );												\
 	}																							\
 	else																						\
 	{																							\
 		first_protocol_error( #obj, #k, 1 );													\
+		all_result->error_code = PROTO_PACK_ERROR;												\
+		return;																					\
 	}
 
 //读list
@@ -136,12 +150,16 @@
 		if ( IS_ARRAY != Z_TYPE_PP( tmp_data ) )												\
 		{																						\
 			first_protocol_error( #obj, #k, 2 );												\
+			all_result->error_code = PROTO_PACK_ERROR;											\
+			return;																				\
 		}																						\
 		new_list_hash = Z_ARRVAL_P( *tmp_data );												\
 	}																							\
 	else																						\
 	{																							\
 		first_protocol_error( #obj, #k, 1 );													\
+		all_result->error_code = PROTO_PACK_ERROR;												\
+		return;																					\
 	}
 
 //判断是否是数组
@@ -149,6 +167,8 @@
 	if( IS_ARRAY != Z_TYPE_PP( z_item ) )														\
 	{																							\
 		first_protocol_error( NULL, list_name, 3 );												\
+		all_result->error_code = PROTO_PACK_ERROR;												\
+		return;																					\
 	}
 
 #define set_data_pointer( pack, size, pointer, type )											\
@@ -162,7 +182,8 @@
 #define php_result_copy( re_pack, des, len )													\
 	if ( re_pack->pos + len > re_pack->max_pos )												\
 	{																							\
-		parse_data_error( #re_pack );															\
+		re_pack->pos = 0;																		\
+		return;																					\
 	}																							\
 	memcpy( des, re_pack->data + re_pack->pos, len );											\
 	re_pack->pos += len

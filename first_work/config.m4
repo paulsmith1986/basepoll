@@ -12,13 +12,15 @@ if test "$PHP_FIRST_WORK" != "no"; then
       LIBSYMBOL=first_result_push_data # you most likely want to change this
       PHP_CHECK_LIBRARY($LIBNAME,$LIBSYMBOL,
       [
-      PHP_ADD_LIBRARY_WITH_PATH($LIBNAME, $FIRSTPROTOCOL_DIR/lib, FIRST_NEW_SHARED_LIBADD)
+      PHP_ADD_LIBRARY_WITH_PATH($LIBNAME, $FIRSTPROTOCOL_DIR/lib, FIRST_WORK_SHARED_LIBADD)
       AC_DEFINE(HAVE_FIRSTPROTOCOLLIB,1,[ ])],
       [AC_MSG_ERROR([$FIRSTPROTOCOL_DIR wrong $LIBNAME lib version or lib not found])],[ -L$FIRSTPROTOCOL_DIR/lib -l$LIBNAME])
   fi
   first_sources="first_work.c		\
 		first_proto.c		\
 		proto_so.c		\
+		proto_c.c		\
 		first_poll.c"
+  PHP_SUBST(FIRST_WORK_SHARED_LIBADD)
   PHP_NEW_EXTENSION(first_work, $first_sources, $ext_shared)
 fi

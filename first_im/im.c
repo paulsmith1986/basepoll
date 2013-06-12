@@ -61,6 +61,8 @@ int main( int argc, char *argv[] )
 	FirstIniReader conf_ini( configPath );
 	const char *bind_ip = conf_ini.read_ini_char( "host", "0.0.0.0" );
 	int port = conf_ini.read_ini_int( "port", 6666 );
+	SUPER_KEY = strdup( conf_ini.read_ini_char( "super_key" ) );
+	LOGIN_KEY = strdup( conf_ini.read_ini_char( "super_key" ) );
 	int main_fd = start_net_service( bind_ip, port );
 	assert( main_fd >= 0 );
 	const char *err_log_path = conf_ini.read_ini_char( "log" );
@@ -73,6 +75,7 @@ int main( int argc, char *argv[] )
 	fd_struct_t *main_fd_struct = main_poller.create_fd_struct( main_fd, FD_TYPE_LISTEN );
 	main_poller.update_fd_event( main_fd_struct, EPOLL_CTL_ADD, EPOLLIN );
 	OUT_LOG << "Server start!" << fin;
+	conf_ini.unset();
 	while ( true )
 	{
 		main_poller.poll( EPOLL_WAIT_TIME );
