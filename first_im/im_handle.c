@@ -106,10 +106,8 @@ void ImHandle::on_signal_fd( fd_struct_t *fd_info )
 		case SIGINT:			//ctrl+c
 		case SIGQUIT:			//和SIGINT类似, 但由QUIT字符(通常是Ctrl-\)来控制
 		case SIGTERM:			//kill
-			shut_down( fdsi.ssi_signo );
-		break;
 		case SIGHUP:			//用户session退出
-
+			shut_down( fdsi.ssi_signo );
 		break;
 		case SIGUSR1:			//自定义
 
