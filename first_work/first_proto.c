@@ -23,7 +23,7 @@ void first_protocol_error( char *proto, char *key_name, int type )
  */
 void parse_data_error( char *type )
 {
-	php_error( E_ERROR, "Parse data: %s error, overflow!\n", type );
+	php_error( E_WARNING, "Parse data: %s error, overflow!\n", type );
 }
 
 /**
