@@ -6,6 +6,8 @@
 #include "php_first_work.h"
 
 #define FIRST_VERSION	"{$first_version}"	//版本信息
+#define FIRST_SEND_CACHE 64 * 1024			//发送缓冲区
+#define PACK_POOL_SIZE 16 * 1024			//发送协议包大小
 
 #define FIRST_SWITCH_DEBUG					//调试开关
 #endif

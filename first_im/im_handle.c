@@ -48,7 +48,6 @@ void ImHandle::on_socket_fd( fd_struct_t *fd_info, protocol_packet_t *read_packe
 		//php和server交互包 20001包可以通过.其它包必须是SOCKET_TYPE_PHP才能通过
 		if ( pack_head->pack_id > 20000 )
 		{
-			printf( "pack_id:%d\n", pack_head->pack_id );
 			if ( fd_info->socket_type != SOCKET_TYPE_PHP_FPM && 20001 != pack_head->pack_id )
 			{
 				close_fd_info( fd_info );

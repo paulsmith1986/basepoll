@@ -1,5 +1,10 @@
 #include "first_poll.h"
-
+#include "fd_list.h"
+#include "so_decode.h"
+#include "so_encode.h"
+#include "so_send.h"
+//关闭socket list
+first_poll_struct_t *CLOSE_FD_LIST = NULL;
 /**
  * 初始化poll
  */
@@ -11,7 +16,7 @@ void first_create_poll()
 		fprintf( stderr, "Can not create epoll\n" );
 		abort();
 	}
-	memset( FIRST_POOL_FD_LIST, 0, sizeof( FIRST_POOL_FD_LIST ) );
+	first_poll_init_list();
 }
 
 //创建倒计时
@@ -121,20 +126,68 @@ PHP_FUNCTION ( first_socket_fd )
 	RETURN_LONG( fd );
 }
 
+//创建socket_fd
+PHP_FUNCTION ( first_host )
+{
+	char *bind_ip;
+	int bind_ip_len;
+	long sock_port;
+	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "sl", &bind_ip, &bind_ip_len, &sock_port ) == FAILURE )
+	{
+		return;
+	}
+	check_epoll_init();
+	int MAIN_SOCKET_FD = 0;
+	if ( ( MAIN_SOCKET_FD = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0)
+	{
+		zend_error( E_ERROR, "Can not create listen fd\n" );
+	}
+	//设置SO_REUSEADDR选项(服务器快速重起)
+	int bReuseaddr = 1;
+	setsockopt( MAIN_SOCKET_FD, SOL_SOCKET, SO_REUSEADDR, &bReuseaddr, sizeof( int ) );
+
+	//发送缓冲区
+	int nSendBuf = FIRST_SEND_CACHE;
+	setsockopt( MAIN_SOCKET_FD, SOL_SOCKET, SO_SNDBUF, ( const char* )&nSendBuf, sizeof( int ) );
+
+	//接收缓冲区
+	int nRevBuf = FIRST_SEND_CACHE;
+	setsockopt( MAIN_SOCKET_FD, SOL_SOCKET, SO_RCVBUF, ( const char* )&nRevBuf, sizeof( int ) );
+
+	//把socket设置为非阻塞方式
+	set_non_block( MAIN_SOCKET_FD );
+	struct sockaddr_in serveraddr;
+
+	memset( &serveraddr, 0, sizeof( serveraddr ) );
+	serveraddr.sin_family = AF_INET;
+	inet_aton( bind_ip, &( serveraddr.sin_addr ) );
+	serveraddr.sin_port = htons( sock_port );
+	if ( bind( MAIN_SOCKET_FD, ( struct sockaddr * ) &serveraddr, sizeof( serveraddr ) ) < 0 )
+	{
+		zend_error( E_ERROR, "Can not bind host:%s port:%d\n", bind_ip, sock_port );
+	}
+	if ( listen( MAIN_SOCKET_FD, 512 ) < 0 )
+	{
+		zend_error( E_ERROR, "Can not listen\n" );
+	}
+	first_poll_add( MAIN_SOCKET_FD, FD_TYPE_LISTEN );
+}
+
 //加入服务器
-PHP_FUNCTION ( first_join_server )
+PHP_FUNCTION ( first_join_im )
 {
 	long fd;
 	char *join_key;
 	int join_key_len;
-	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "ls", &fd, &join_key, &join_key_len ) == FAILURE )
+	long socket_type = 1;
+	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "ls|l", &fd, &join_key, &join_key_len ) == FAILURE )
 	{
 		return;
 	}
 	first_poll_struct_t *fd_info = find_fd_info( fd );
 	if ( NULL == fd_info )
 	{
-		zend_error( E_WARNING, "Can not find fdstruct\n" );
+		zend_error( E_WARNING, "Can not find fdstruct, fd:%d\n", fd );
 		RETURN_FALSE;
 	}
 	proto_php_join_server_t join_pack;
@@ -143,6 +196,44 @@ PHP_FUNCTION ( first_join_server )
 	encode_php_join_server( send_pack, &join_pack );
 	protocol_send_pack( fd_info, send_pack );
 	RETURN_TRUE;
+}
+
+//发送数据包
+PHP_FUNCTION ( first_send_pack )
+{
+	long fd;
+	long proto_id;
+	zval *data = NULL;
+	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "ll|a", &fd, &proto_id, &data ) == FAILURE )
+	{
+		return;
+	}
+	first_poll_struct_t *fd_info = find_fd_info( fd );
+	if ( NULL == fd_info )
+	{
+		zend_error( E_WARNING, "Can not find fdstruct, fd:%d\n", fd );
+		RETURN_FALSE;
+	}
+	HashTable *hash_arr = NULL;
+	if ( NULL != data )
+	{
+		hash_arr = Z_ARRVAL_P( data );
+	}
+	char RESULT_POOL_[ PACK_POOL_SIZE ];
+	protocol_result_t pack_data_result;
+	memset( &pack_data_result, 0, sizeof( protocol_result_t ) );
+	pack_data_result.max_pos = PACK_POOL_SIZE;
+	pack_data_result.str = RESULT_POOL_;
+	php_pack_protocol_data( proto_id, hash_arr, pack_data_result );
+	if ( pack_data_result.error_code )
+	{
+		RETURN_FALSE;
+	}
+	else
+	{
+		protocol_send_pack( fd_info, pack_data_result );
+		RETURN_TRUE;
+	}
 }
 
 //等待事件发生
@@ -164,11 +255,28 @@ PHP_FUNCTION ( first_poll )
 			int event_type;
 			switch ( fd_struct->fd_type )
 			{
+				case FD_TYPE_LISTEN:
+				{
+					struct sockaddr_in clientaddr;
+					socklen_t clilen = sizeof( clientaddr );
+					int connfd = accept( fd_struct->fd, (struct sockaddr *) &clientaddr, &clilen );
+					if ( connfd < 0 )
+					{
+						fprintf( stderr, "Can not accept!\n" );
+					}
+					else
+					{
+						printf( "new connection\n" );
+						//设置为非阻塞
+						set_non_block( connfd );
+						first_poll_add( connfd, FD_TYPE_SOCKET );
+					}
+				}
+				break;
 				case FD_TYPE_SOCKET:		//socket事件响应
 				{
 					if ( events[ i ].events & EPOLLRDHUP )
 					{
-						printf( "close fd:%d\n", events[ i ].events );
 						first_close_fd( fd_struct );
 						event_type = 0;
 						fd_struct->is_return = 0;
@@ -205,7 +313,7 @@ PHP_FUNCTION ( first_poll )
 					event_type = 5;
 				break;
 				default:
-					fprintf( stderr, "Unkown fd type.\n" );
+					fprintf( stderr, "Unkown fd type: %d\n", fd_struct->fd_type );
 				break;
 			}
 			if ( fd_struct->is_return )
@@ -222,7 +330,6 @@ PHP_FUNCTION ( first_poll )
 		if ( NULL != CLOSE_FD_LIST )
 		{
 			check_fd_close_list();
-			CLOSE_FD_LIST = NULL;
 		}
 	}
 	else
@@ -240,46 +347,8 @@ void first_poll_add( int fd, first_poll_type fd_type )
 	memset( fd_info, 0, sizeof( first_poll_struct_t ) );
 	fd_info->fd = fd;
 	fd_info->fd_type = fd_type;
-	int index = fd % FIRST_POLL_MAX_EVENT;
-	if ( NULL == FIRST_POOL_FD_LIST[ index ] )
-	{
-		FIRST_POOL_FD_LIST[ index ] = fd_info;
-	}
-	else
-	{
-		fd_info->next = FIRST_POOL_FD_LIST[ index ];
-		FIRST_POOL_FD_LIST[ index ] = fd_info;
-	}
+	first_poll_list_add( fd_info );
 	first_update_event( fd_info, EPOLL_CTL_ADD, READ_EVENT );
-}
-
-/**
- * 根据fd查找fd_struct
- */
-first_poll_struct_t *find_fd_info( int fd )
-{
-	int index = fd % FIRST_POLL_MAX_EVENT;
-	if ( NULL == FIRST_POOL_FD_LIST[ index ] )
-	{
-		return NULL;
-	}
-	if ( FIRST_POOL_FD_LIST[ index ]->fd == fd )
-	{
-		return FIRST_POOL_FD_LIST[ index ];
-	}
-	else
-	{
-		first_poll_struct_t *tmp_info = FIRST_POOL_FD_LIST[ index ]->next;
-		while ( NULL != tmp_info )
-		{
-			if ( tmp_info->fd == fd )
-			{
-				break;
-			}
-			tmp_info = tmp_info->next;
-		}
-		return tmp_info;
-	}
 }
 
 /**
@@ -608,6 +677,9 @@ void first_on_socket_read( first_poll_struct_t *fd_info, protocol_packet_t *data
 			fd_info->is_return = first_im_proxy_pack( &tmp_pack, tmp_result );
 		}
 		break;
+		default: //其它包
+			php_unpack_protocol_data( pack_head->pack_id, data_pack, tmp_result );
+		break;
 	}
 }
 
@@ -622,12 +694,12 @@ int first_im_proxy_pack( protocol_packet_t *proxy_pack, zval *tmp_result )
 	{
 		case 101:
 		{
-			read_account_new( proxy_pack, tmp_result );
+			soread_account_new( proxy_pack, tmp_result );
 		}
 		break;
 		case 103:
 		{
-			read_account_login( proxy_pack, tmp_result );
+			soread_account_login( proxy_pack, tmp_result );
 		}
 		break;
 	}
@@ -650,7 +722,7 @@ void check_fd_close_list()
 	first_poll_struct_t *tmp_fd = CLOSE_FD_LIST;
 	while ( NULL != tmp_fd )
 	{
-		//未
+		//未发送的消息
 		if ( 0 != tmp_fd->un_send_len && NULL != tmp_fd->un_send )
 		{
 			free( tmp_fd->un_send );
@@ -659,8 +731,11 @@ void check_fd_close_list()
 		{
 			delete_protocol_packet( tmp_fd->un_read_pack );
 		}
+		//从fd_list中移出
+		first_pool_list_remove( tmp_fd->fd );
 		tmp_fd = tmp_fd->next;
 	}
+	CLOSE_FD_LIST = NULL;
 }
 
 /**

@@ -14,7 +14,8 @@
 #include "first_protocol.h"
 #include "encode_client.h"
 #define MAX_LOOP_TIMEOUT 16 * 1000							//事件等待时间
-#define FIRST_POLL_MAX_EVENT 8								//同时事件个数
+#define FIRST_POLL_MAX_EVENT 32								//同时事件个数
+#define FIRST_POLL_INIT_SIZE 8								//初始化list大小
 #define NET_SEND_CACHE 1024 * 64							//缓冲区
 #define BIG_PACKET 1024 * 32								//大数据包
 #define MAX_READ_DATA 1024 * 64								//最大读取数据包
@@ -45,10 +46,9 @@ struct first_poll_struct_t{
 	int						is_return;						//是否返回到php
 	first_poll_struct_t*	next;							//用于查找
 };
-//存放fd_struct
-first_poll_struct_t *FIRST_POOL_FD_LIST[ FIRST_POLL_MAX_EVENT ];
+
 //关闭socket list
-first_poll_struct_t *CLOSE_FD_LIST = NULL;
+extern first_poll_struct_t *CLOSE_FD_LIST;
 /**
  * 初始化poll
  */
@@ -68,11 +68,6 @@ void first_update_event( first_poll_struct_t *fd_info, int op, int new_event );
  * 创建连接过程
  */
 int first_socket_connect( const char *host, int port );
-
-/**
- * 根据fd查找fd_struct
- */
-first_poll_struct_t *find_fd_info( int fd );
 
 /**
  * 设置为非阻塞状态函数

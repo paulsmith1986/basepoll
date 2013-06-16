@@ -1650,9 +1650,11 @@ void fight_final_end( combat_info_t *combat_info )
 void init_first_fight()
 {
 	//申请技能指针数组空间
-	GLOBAL_VARS.skill_info_pool = ( skill_t** )malloc( sizeof( skill_t ) * DEF_SKILL_NUM );
+	GLOBAL_VARS.skill_info_pool = ( skill_t** )malloc( sizeof( skill_t* ) * DEF_SKILL_NUM );
+	memset( GLOBAL_VARS.skill_info_pool, 0,  sizeof( skill_t* ) * DEF_SKILL_NUM );
 	//申请状态指针数组空间
-	GLOBAL_VARS.buff_info_pool = ( buff_t** )malloc( sizeof( buff_t ) * DEF_SKILL_BUFF_NUM );
+	GLOBAL_VARS.buff_info_pool = ( buff_t** )malloc( sizeof( buff_t* ) * DEF_SKILL_BUFF_NUM );
+	memset( GLOBAL_VARS.buff_info_pool, 0,  sizeof( buff_t* ) * DEF_SKILL_BUFF_NUM );
 	//初始化技能效果
 	init_skill_effect();
 }

@@ -20,6 +20,7 @@ if test "$PHP_FIRST_WORK" != "no"; then
 		first_proto.c		\
 		proto_so.c		\
 		proto_c.c		\
+		fd_list.c		\
 		first_poll.c"
   PHP_SUBST(FIRST_WORK_SHARED_LIBADD)
   PHP_NEW_EXTENSION(first_work, $first_sources, $ext_shared)
