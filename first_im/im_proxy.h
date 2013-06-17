@@ -7,7 +7,10 @@ class ImProxy
 		ImProxy()
 		: proxy_index_( 0 )
 		{}
-		~ImProxy(){}
+		~ImProxy(){
+			im_proxy_map_.clear();
+			im_proxy_list_.clear();
+		}
 		void proxy( protocol_result_t *pack_data );
 		void add( fd_struct_t *fd_info );
 		void check_is_php_fd( fd_struct_t *fd_info );
