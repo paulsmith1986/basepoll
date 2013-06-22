@@ -170,10 +170,10 @@ typedef struct fight_unit_t fight_unit_t;
 #define check_read_ret( ret ) if ( 1 != ret ){return -2;}
 
 //是否已经死亡
-#define is_dead( member )	member->life_now <= 0
+#define is_dead( member ) ( member->life_now <= 0 )
 
 //是否没有死亡
-#define is_live( member )	member->life_now > 0
+#define is_live( member ) ( member->life_now > 0 )
 
 //判断是否要攻击对方
 #define is_attack_object( skill_info, attack_member ) skill_info->attack_num > 0 || NULL != skill_info->object_effect || NULL != skill_info->object_buff || NULL != attack_member->attack_object_eff[ AIM_DIRECT ] || NULL != attack_member->attack_object_eff[ AIM_INDIRECT ] || NULL != attack_member->attack_object_eff[ AIM_EXCEPT_DIRECT ] || NULL != attack_member->attack_object_buff[ AIM_DIRECT ] || NULL != attack_member->attack_object_buff[ AIM_INDIRECT ] || NULL != attack_member->attack_object_buff[ AIM_EXCEPT_DIRECT ]

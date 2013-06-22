@@ -85,6 +85,29 @@ struct packet_head_t{
 	memcpy( des, re_pack->data + re_pack->pos, len );								\
 	re_pack->pos += len
 
+//将结果的一段拷出 返回void
+#define pre_result_copy( re_pack, des, len, result_pool )							\
+	if ( re_pack->pos + len > re_pack->max_pos )									\
+	{																				\
+		result_pool->error_code = PROTO_ERROR_OVERFLOW;								\
+		re_pack->pos += len;														\
+		return;																		\
+	}																				\
+	memcpy( des, re_pack->data + re_pack->pos, len );								\
+	re_pack->pos += len
+
+
+//预计数据大小
+#define pre_read_size( re_pack, len, result_pool )									\
+	if ( re_pack->pos + len > re_pack->max_pos )									\
+	{																				\
+		result_pool->error_code = PROTO_ERROR_OVERFLOW;								\
+		re_pack->pos += len;														\
+		return;																		\
+	}																				\
+	re_pack->pos += len
+
+
 //服务器端数据异常处理
 #define catch_error_packet( byte_pack, fd_info, error_code )
 //客户端数据异常处理
@@ -107,6 +130,8 @@ void write_UTF( protocol_result_t *re_pack, char *re_str );
 //从结果集中读字符串
 char *read_UTF( protocol_packet_t *re_pack, protocol_result_t *data_pool );
 
+//从结果集中读字符串(预计)
+void pre_read_UTF( protocol_packet_t *re_pack, protocol_result_t *data_pool );
 /**
  * 存结果
  * @param	result		结果包指针

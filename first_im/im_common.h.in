@@ -13,6 +13,8 @@
 #define FIRST_DEBUG_SWITCH
 #define CLIENT_MAX_REQEUST			16 * 1024				//客户端最大能发送的数据量
 #define SOCKET_TYPE_PHP_FPM			1						//socket连接类型 php_fpm
+#define SOCKET_TYPE_PHP_TASK		2						//socket连接类型 php任务进程
+#define SOCKET_TYPE_PHP_ADMIN		3						//socket连接类型 php主管理进程
 //版本号
 #define	VERSION						"{$im_version}"
 

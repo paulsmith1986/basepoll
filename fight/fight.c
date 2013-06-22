@@ -1,24 +1,19 @@
 #include "fight.h"
-
+int test_fight( global_t *global_vars );
 int main()
 {
 	global_t global_vars;
-	printf( "sizeof fight_unit_t:%d\n", sizeof( fight_unit_t ) );
-	srand( time( 0 ) );
-	combat_info_t combat_info;
-	memset( &combat_info, 0, sizeof( combat_info_t ) );
 	memset( &global_vars, 0, sizeof( global_t ) );
-	combat_info.fight_result = (char*)malloc( FIGHT_RESULT_CHAR );
-	combat_info.result_pos_max = FIGHT_RESULT_CHAR;
-	global_vars.max_ext_buff = 1;
-	global_vars.max_ext_effect = 1;
+	global_vars.max_ext_buff = 10;
+	global_vars.max_ext_effect = 10;
 	global_vars.max_fight_unit = 10;
-	global_vars.max_fight_buff = 1;
-	global_vars.max_use_skill = 1;
-	//初始化技能公式
-	init_skill_formula();
+	global_vars.max_fight_buff = 10;
+	global_vars.max_use_skill = 10;
+
 	//初始化战斗
 	init_first_fight();
+	//初始化技能公式
+	init_skill_formula();
 	int read_re = read_fight_config_dat_file( (char*)"skill.dat" );
 	#ifdef FIRST_DEBUG
 	printf( "读取配置文件  re:%d\n", read_re );
@@ -27,7 +22,22 @@ int main()
 	{
 		return -1;
 	}
-	combat_info.global_var = &global_vars;
+	int i = 0;
+	for ( i = 0; i < 1; ++i )
+	{
+		test_fight( &global_vars );
+	}
+	return 0;
+}
+
+int test_fight( global_t *global_vars )
+{
+	combat_info_t combat_info;
+	memset( &combat_info, 0, sizeof( combat_info_t ) );
+	combat_info.fight_result = (char*)malloc( FIGHT_RESULT_CHAR );
+	combat_info.is_free_result = 1;
+	combat_info.result_pos_max = FIGHT_RESULT_CHAR;
+	combat_info.global_var = global_vars;
 	int i = 0;
 	for ( i = 0; i < SIDE_MEMBER; ++i )
 	{
@@ -46,11 +56,11 @@ int main()
 	{
 		once_second( &combat_info );
 	}
-	FILE *re_file = fopen( "result.dat", "w" );
-	fwrite( combat_info.fight_result, combat_info.result_pos, 1, re_file );
-	fclose( re_file );
-	printf( "战斗结束 is_over = %d second:%d\n", combat_info.is_over, combat_info.second );
-	return 0;
+	printf( "fight_over!sed:%d, pos:%d, max_pos:%d %u\n", combat_info.second, combat_info.result_pos, combat_info.result_pos_max, combat_info.fight_result );
+	if ( combat_info.is_free_result )
+	{
+		free( combat_info.fight_result );
+	}
 }
 
 use_skill_t *make_skill( int skill_type, combat_info_t *combat_info )
@@ -69,6 +79,7 @@ use_skill_t *make_skill( int skill_type, combat_info_t *combat_info )
 	skill_t *skill_info = find_skill_info( skill_id );
 	use_skill_t *use_sk = create_use_skill( combat_info );
 	use_sk->skill_id = skill_id;
+	printf( "skill_id:%d\n", skill_id );
 	use_sk->skill_level = first_rand( 3, 5 );
 	use_sk->add_hr = 0;
 	use_sk->skill_cost = 50;

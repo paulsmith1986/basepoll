@@ -173,31 +173,6 @@ PHP_FUNCTION ( first_host )
 	first_poll_add( MAIN_SOCKET_FD, FD_TYPE_LISTEN );
 }
 
-//加入服务器
-PHP_FUNCTION ( first_join_im )
-{
-	long fd;
-	char *join_key;
-	int join_key_len;
-	long socket_type = 1;
-	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "ls|l", &fd, &join_key, &join_key_len ) == FAILURE )
-	{
-		return;
-	}
-	first_poll_struct_t *fd_info = find_fd_info( fd );
-	if ( NULL == fd_info )
-	{
-		zend_error( E_WARNING, "Can not find fdstruct, fd:%d\n", fd );
-		RETURN_FALSE;
-	}
-	proto_php_join_server_t join_pack;
-	join_pack.join_key = join_key;
-	join_pack.socket_type = 1;
-	encode_php_join_server( send_pack, &join_pack );
-	protocol_send_pack( fd_info, send_pack );
-	RETURN_TRUE;
-}
-
 //发送数据包
 PHP_FUNCTION ( first_send_pack )
 {

@@ -1,7 +1,6 @@
 #ifndef FIRST_NEW_FIGHT_PROTOCOL_H
 #define FIRST_NEW_FIGHT_PROTOCOL_H
 #include "first_fight.h"
-#pragma pack(1)
 
 #define			RESULT_NEW_SEC				1			//每一秒结束
 #define			RESULT_NEW_TEAM				2			//切换小队
@@ -22,6 +21,7 @@
 #define			RESULT_MEMBER_CA_END		17			//反击结束
 #define			RESULT_MEMBER_COM			18			//碾压
 
+#pragma pack(1)
 //切换小队包
 typedef struct result_pack_new_team_t result_pack_new_team_t;
 struct result_pack_new_team_t{

@@ -102,6 +102,19 @@ char *read_UTF( protocol_packet_t *re_pack, protocol_result_t *data_pool )
 	return re_char;
 }
 
+//从结果集中读字符串(预计)
+void pre_read_UTF( protocol_packet_t *re_pack, protocol_result_t *data_pool )
+{
+	string_len_t str_len;
+	pre_result_copy( re_pack, &str_len, sizeof( string_len_t ), data_pool );
+	char *re_char = &data_pool->str[ data_pool->pos ];
+	if ( str_len > 0 )
+	{
+		pre_read_size( re_pack, str_len, data_pool );
+	}
+	data_pool->max_pos += ( str_len + 1 );
+}
+
 /**
  * 从结果中读取出定长字符串
  */

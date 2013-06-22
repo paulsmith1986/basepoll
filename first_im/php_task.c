@@ -27,5 +27,8 @@ void request_php_join_server( fd_struct_t *fd_info, proto_php_join_server_t *req
 		return;
 	}
 	fd_info->socket_type = req_pack->socket_type;
-	IM_PROXY_OBJECT.add( fd_info );
+	if ( SOCKET_TYPE_PHP_FPM == fd_info->socket_type )
+	{
+		IM_PROXY_OBJECT.add( fd_info );
+	}
 }

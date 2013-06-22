@@ -21,70 +21,81 @@ void once_second( combat_info_t *combat_info )
 	if ( ++combat_info->second > combat_info->max_second )
 	{
 		combat_info->is_over = 1;
+	}
+	else
+	{
+		#ifdef FIRST_DEBUG
+		printf( "=====================第 %d 秒=======================\n", combat_info->second );
+		#endif
+
+		int old_result_pos = combat_info->result_pos;
+
+		//Dot流血效果
+		fight_dot_life( combat_info->atk_member );
+		fight_dot_life( combat_info->def_member );
+		if ( 0 == combat_info->is_over )
+		{
+			//出手顺序
+			static const int attack_seqence[ 9 ] = { 5, 2, 8, 4, 1, 7, 3, 0, 6 };
+			register int now_fight_time = combat_info->second;
+			//确认出手者
+			register int i;
+			for ( i = 0; i < SIDE_MEMBER; ++i )
+			{
+				fight_unit_t *round_attack_member[ 2 ] = {NULL, NULL};
+				//攻击方该位置有人
+				if ( check_is_round( combat_info->atk_member, i, now_fight_time ) )
+				{
+					round_attack_member[ 0 ] = combat_info->atk_member[ i ];
+				}
+				//防守方有人
+				if ( check_is_round( combat_info->def_member, i, now_fight_time ) )
+				{
+					round_attack_member[ 1 ] = combat_info->def_member[ i ];
+				}
+				//当攻击和防守方都有人时
+				if ( NULL != round_attack_member[ 0 ] && NULL != round_attack_member[ 1 ] )
+				{
+					once_round( round_attack_member[ combat_info->now_rand_side ] );
+					round_attack_member[ combat_info->now_rand_side ] = NULL;
+					combat_info->now_rand_side = 1 - combat_info->now_rand_side;
+				}
+				//双方都没有人出手
+				if ( NULL == round_attack_member[ 0 ] && NULL == round_attack_member[ 1 ] )
+				{
+					continue;
+				}
+				//攻击方有人出手
+				else if ( NULL != round_attack_member[ 0 ] )
+				{
+					once_round( round_attack_member[ 0 ] );
+				}
+				else
+				{
+					once_round( round_attack_member[ 1 ] );
+				}
+				if ( combat_info->is_over )
+				{
+					break;
+				}
+			}
+			//状态过期
+			fight_buff_expire( combat_info->atk_member );
+			fight_buff_expire( combat_info->def_member );
+		}
+		if ( old_result_pos != combat_info->result )
+		{
+			//输出结果
+			result_pack_sec_t pack_sec;
+			pack_sec.pack_id = RESULT_NEW_SEC;
+			pack_sec.sec = combat_info->second;
+			push_fight_result( combat_info, &pack_sec, sizeof( result_pack_sec_t ) );
+		}
+	}
+	//战斗结束
+	if ( combat_info->is_over )
+	{
 		fight_final_end( combat_info );
-		return;
-	}
-
-	#ifdef FIRST_DEBUG
-	printf( "=====================第 %d 秒=======================\n", combat_info->second );
-	#endif
-
-	int old_result_pos = combat_info->result_pos;
-
-	//Dot流血效果
-	fight_dot_life( combat_info->atk_member );
-	fight_dot_life( combat_info->def_member );
-
-	//出手顺序
-	static const int attack_seqence[ 9 ] = { 5, 2, 8, 4, 1, 7, 3, 0, 6 };
-	register int now_fight_time = combat_info->second;
-	//确认出手者
-	register int i;
-	for ( i = 0; i < SIDE_MEMBER; ++i )
-	{
-		fight_unit_t *round_attack_member[ 2 ] = {NULL, NULL};
-		//攻击方该位置有人
-		if ( check_is_round( combat_info->atk_member, i, now_fight_time ) )
-		{
-			round_attack_member[ 0 ] = combat_info->atk_member[ i ];
-		}
-		//防守方有人
-		if ( check_is_round( combat_info->def_member, i, now_fight_time ) )
-		{
-			round_attack_member[ 1 ] = combat_info->def_member[ i ];
-		}
-		//当攻击和防守方都有人时
-		if ( NULL != round_attack_member[ 0 ] && NULL != round_attack_member[ 1 ] )
-		{
-			once_round( round_attack_member[ combat_info->now_rand_side ] );
-			round_attack_member[ combat_info->now_rand_side ] = NULL;
-			combat_info->now_rand_side = 1 - combat_info->now_rand_side;
-		}
-		//双方都没有人出手
-		if ( NULL == round_attack_member[ 0 ] && NULL == round_attack_member[ 1 ] )
-		{
-			continue;
-		}
-		//攻击方有人出手
-		else if ( NULL != round_attack_member[ 0 ] )
-		{
-			once_round( round_attack_member[ 0 ] );
-		}
-		else
-		{
-			once_round( round_attack_member[ 1 ] );
-		}
-	}
-	//状态过期
-	fight_buff_expire( combat_info->atk_member );
-	fight_buff_expire( combat_info->def_member );
-	if ( old_result_pos != combat_info->result )
-	{
-		//输出结果
-		result_pack_sec_t pack_sec;
-		pack_sec.pack_id = RESULT_NEW_SEC;
-		pack_sec.sec = combat_info->second;
-		push_fight_result( combat_info, &pack_sec, sizeof( result_pack_sec_t ) );
 	}
 }
 
@@ -336,142 +347,149 @@ void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill )
 		fight_unit_t **aim_side_member;
 		find_oppose_side( attack_member->side, attack_member->combat_info, aim_side_member );
 		int direct_aim = find_direct_aim( attack_member->cell_id, aim_side_member );
-		//找出本次攻击对方受影响的列表
-		int object_aim_num = find_indirect_aim( skill_info->object_aim, direct_aim, aim_list, aim_side_member );
-		#ifdef FIRST_DEBUG
-		printf( "\n攻击次数: %d ", skill_info->attack_num );
-		#endif
-		for ( aim_id = 0; aim_id < object_aim_num; ++aim_id )
+		if ( direct_aim >= 0 )
 		{
-			fight_unit_t *aim_member = aim_side_member[ aim_list[ aim_id ] ];
-
-			if ( NULL == aim_member || is_dead( aim_member ) )
-			{
-				continue;
-			}
-			change_anger_value( aim_member, ANGER_ADD_NUM );
-
+			//找出本次攻击对方受影响的列表
+			int object_aim_num = find_indirect_aim( skill_info->object_aim, direct_aim, aim_list, aim_side_member );
 			#ifdef FIRST_DEBUG
-			printf( "\n【被击】 成员: %d_%d 气血:%d \n\t", aim_member->side, aim_member->cell_id, aim_member->life_now );
+			printf( "\n攻击次数: %d ", skill_info->attack_num );
 			#endif
-			//本次攻击的命中率
-			int hit_ration;
-			skill_object_hit_ration( attack_member, use_skill, skill_info, hit_ration, aim_member );
-			//第一次判断的命中率
-			int is_first_time_hr = is_rand( hit_ration );
-			//技能效果和状态的命中判断
-			if ( is_first_time_hr )
+			for ( aim_id = 0; aim_id < object_aim_num; ++aim_id )
 			{
-				//如果技能触发时有附加效果，先执行这个效果
-				if ( NULL != attack_member->ext_sk_effect )
-				{
-					#ifdef FIRST_DEBUG
-					printf( "〖检测主动技能触发时给 对手 的效果〗\n" );
-					#endif
-					direct_extend_effect( attack_member, attack_member->ext_sk_effect, 1, skill_info->skill_id );
-				}
-				//技能对敌方的效果
-				if ( NULL != skill_info->object_effect )
-				{
-					direct_effect( attack_member, aim_member, skill_info->object_effect );
-				}
-				//技能对敌方的状态
-				if ( NULL != skill_info->object_buff )
-				{
-					skill_buff( attack_member, aim_member, skill_info->object_buff );
-				}
-			}
-			//被闪避
-			else
-			{
-				#ifdef FIRST_DEBUG
-				printf( "\n【MISS】\n" );
-				#endif
-				fight_dr_pack( aim_member );
-			}
+				fight_unit_t *aim_member = aim_side_member[ aim_list[ aim_id ] ];
 
-			//攻击判断
-			if ( skill_info->attack_num > 0 )
-			{
-				int attack_i;
-				for ( attack_i = 0; attack_i < skill_info->attack_num; ++attack_i )
+				if ( NULL == aim_member || is_dead( aim_member ) )
 				{
-					//每一次单独命中判断
-					if ( ( 0 == attack_i && is_first_time_hr ) || ( 0 != attack_i && is_rand( hit_ration ) ) )
-					{
-						//如果该技能打多人时，攻击力有递增功能
-						if ( 0 != skill_info->attack_step && 0 != attack_i )
-						{
-							//先加上去这个临时增加的攻击
-							attack_member->once_effect.attack_rate += skill_info->attack_step;
-							normal_attack( attack_member, aim_member );
-							//再减掉这个临时增加的攻击
-							attack_member->once_effect.attack_rate -= skill_info->attack_step;
-						}
-						else
-						{
-							normal_attack( attack_member, aim_member );
-						}
-						//有可能攻击者被反弹死
-						if ( is_dead( aim_member ) || is_dead( attack_member ) )
-						{
-							break;
-						}
-					}
-					//继续输出闪避包
-					else if ( 0 != attack_i )
+					continue;
+				}
+				change_anger_value( aim_member, ANGER_ADD_NUM );
+
+				#ifdef FIRST_DEBUG
+				printf( "\n【被击】 成员: %d_%d 气血:%d \n\t", aim_member->side, aim_member->cell_id, aim_member->life_now );
+				#endif
+				//本次攻击的命中率
+				int hit_ration;
+				skill_object_hit_ration( attack_member, use_skill, skill_info, hit_ration, aim_member );
+				//第一次判断的命中率
+				int is_first_time_hr = is_rand( hit_ration );
+				//技能效果和状态的命中判断
+				if ( is_first_time_hr )
+				{
+					//如果技能触发时有附加效果，先执行这个效果
+					if ( NULL != attack_member->ext_sk_effect )
 					{
 						#ifdef FIRST_DEBUG
-						printf( "\n【MISS】\n" );
+						printf( "〖检测主动技能触发时给 对手 的效果〗\n" );
 						#endif
-						fight_dr_pack( aim_member );
+						direct_extend_effect( attack_member, attack_member->ext_sk_effect, 1, skill_info->skill_id );
+					}
+					//技能对敌方的效果
+					if ( NULL != skill_info->object_effect )
+					{
+						direct_effect( attack_member, aim_member, skill_info->object_effect );
+					}
+					//技能对敌方的状态
+					if ( NULL != skill_info->object_buff )
+					{
+						skill_buff( attack_member, aim_member, skill_info->object_buff );
 					}
 				}
-				//如果是第一个受攻击者,判断反击
-				if ( 0 == aim_id )
+				//被闪避
+				else
 				{
+					#ifdef FIRST_DEBUG
+					printf( "\n【MISS】\n" );
+					#endif
+					fight_dr_pack( aim_member );
+				}
+
+				//攻击判断
+				if ( skill_info->attack_num > 0 )
+				{
+					int attack_i;
 					for ( attack_i = 0; attack_i < skill_info->attack_num; ++attack_i )
 					{
-						if ( is_live( attack_member ) && is_live( aim_member ) && 0 == aim_member->stun )
+						//每一次单独命中判断
+						if ( ( 0 == attack_i && is_first_time_hr ) || ( 0 != attack_i && is_rand( hit_ration ) ) )
 						{
-							int attack_back_ration = get_ca_rate( aim_member, attack_member );
-							#ifdef FIRST_DEBUG
-							printf( "反击率:%d \n", attack_back_ration );
-							#endif
-							if ( is_rand( attack_back_ration ) )
+							//如果该技能打多人时，攻击力有递增功能
+							if ( 0 != skill_info->attack_step && 0 != attack_i )
 							{
-								counter_attack( aim_member, attack_member );
+								//先加上去这个临时增加的攻击
+								attack_member->once_effect.attack_rate += skill_info->attack_step;
+								normal_attack( attack_member, aim_member );
+								//再减掉这个临时增加的攻击
+								attack_member->once_effect.attack_rate -= skill_info->attack_step;
+							}
+							else
+							{
+								normal_attack( attack_member, aim_member );
+							}
+							//有可能攻击者被反弹死
+							if ( is_dead( aim_member ) || is_dead( attack_member ) )
+							{
+								break;
+							}
+						}
+						//继续输出闪避包
+						else if ( 0 != attack_i )
+						{
+							#ifdef FIRST_DEBUG
+							printf( "\n【MISS】\n" );
+							#endif
+							fight_dr_pack( aim_member );
+						}
+					}
+					//如果是第一个受攻击者,判断反击
+					if ( 0 == aim_id )
+					{
+						for ( attack_i = 0; attack_i < skill_info->attack_num; ++attack_i )
+						{
+							if ( is_live( attack_member ) && is_live( aim_member ) && 0 == aim_member->stun )
+							{
+								int attack_back_ration = get_ca_rate( aim_member, attack_member );
+								#ifdef FIRST_DEBUG
+								printf( "反击率:%d \n", attack_back_ration );
+								#endif
+								if ( is_rand( attack_back_ration ) )
+								{
+									counter_attack( aim_member, attack_member );
+								}
 							}
 						}
 					}
 				}
-			}
-			//技能不攻击，也要判断反击
-			else if ( 0 == aim_id  )
-			{
-				int attack_back_ration = get_ca_rate( aim_member, attack_member );
-				#ifdef FIRST_DEBUG
-				printf( "反击率:%d \n", attack_back_ration );
-				#endif
-				if ( is_rand( attack_back_ration ) )
+				//技能不攻击，也要判断反击
+				else if ( 0 == aim_id  )
 				{
-					counter_attack( aim_member, attack_member );
+					int attack_back_ration = get_ca_rate( aim_member, attack_member );
+					#ifdef FIRST_DEBUG
+					printf( "反击率:%d \n", attack_back_ration );
+					#endif
+					if ( is_rand( attack_back_ration ) )
+					{
+						counter_attack( aim_member, attack_member );
+					}
+				}
+				//技能不攻击..但也要判断命中后的状态
+				if ( NULL != attack_member->ext_object_buff && is_first_time_hr && skill_info->skill_id > 0 )
+				{
+					#ifdef FIRST_DEBUG
+					printf( "『执行命中后给 对手 的状态（技能 %d）』", skill_info->skill_id );
+					#endif
+					//攻击命中后状态
+					add_extend_buff( attack_member, aim_member, attack_member->ext_object_buff, skill_info->skill_id );
+				}
+				//攻击者自己死掉
+				if ( is_dead( attack_member ) )
+				{
+					break;
 				}
 			}
-			//技能不攻击..但也要判断命中后的状态
-			if ( NULL != attack_member->ext_object_buff && is_first_time_hr && skill_info->skill_id > 0 )
-			{
-				#ifdef FIRST_DEBUG
-				printf( "『执行命中后给 对手 的状态（技能 %d）』", skill_info->skill_id );
-				#endif
-				//攻击命中后状态
-				add_extend_buff( attack_member, aim_member, attack_member->ext_object_buff, skill_info->skill_id );
-			}
-			//攻击者自己死掉
-			if ( is_dead( attack_member ) )
-			{
-				break;
-			}
+		}
+		else
+		{
+			printf( "===%d==%d==========================================No aim\n", combat_info->side_num[ 0 ], combat_info->side_num[ 1 ] );
 		}
 	}
 
@@ -484,32 +502,9 @@ void once_attack( fight_unit_t *attack_member, use_skill_t *use_skill )
 			memset( &member->once_effect, 0, sizeof( effect_once_t ) );
 		}
 	}
-	if ( is_live( attack_member ) )
-	{
-		int next_time;
-		//确定下一次出手的时间
-		if ( combat_info->side_num[ attack_member->side ] <= MIN_NEXT_ATTACK_TIME )
-		{
-			next_time = MIN_NEXT_ATTACK_TIME;
-		}
-		else
-		{
-			next_time = combat_info->side_num[ attack_member->side ];
-		}
-	}
 	#ifdef FIRST_DEBUG
 	printf( "\n" );
 	#endif
-	//如果战斗结束了,判断有没有下一队成员
-	if ( combat_info->is_over )
-	{
-		combat_try_change_team( combat_info );
-		//没有下一队，战斗真的结束了
-		if ( combat_info->is_over )
-		{
-			fight_final_end( combat_info );
-		}
-	}
 }
 
 /**
@@ -833,6 +828,7 @@ void remove_buff( fight_unit_t *member, fight_buff_t *buff, int remove_type )
  */
 void clean_role_buff_list( fight_unit_t *member )
 {
+	combat_info_t *combat_info = member->combat_info;
 	int i;
 	for ( i = 0; i < 2; ++i )
 	{
@@ -841,8 +837,9 @@ void clean_role_buff_list( fight_unit_t *member )
 		{
 			fight_buff_t *del_buff = head_buff;
 			head_buff = head_buff->next;
-			destroy_fight_buff( del_buff, member->combat_info );
+			destroy_fight_buff( del_buff, combat_info );
 		}
+		member->buff_list[ i ] = NULL;
 	}
 
 }
@@ -1100,9 +1097,10 @@ int find_direct_aim( int my_cell, fight_unit_t *aim_member[] )
 	{
 		find_direct = -1;
 	}
-	int for_time, i;
+	int for_time;
 	for ( for_time = 0; for_time <= 3; ++for_time )
 	{
+		int i;
 		beg_pos = line * 3;
 		for ( i = beg_pos; i < beg_pos + 3; ++i )
 		{
@@ -1539,6 +1537,7 @@ void fight_buff_expire( fight_unit_t *member_list[] )
 			int team_cell_id = member->team_cell_id;
 			combat_info_t *combat_info = member->combat_info;
 			clean_member_data( member );
+			member_list[ i ] = NULL;
 			//死亡时检测有没有后续补位
 			member_dead_callback( combat_info, side, team_cell_id );
 		}
@@ -1571,37 +1570,45 @@ void clean_member_data( fight_unit_t *member )
 	if ( NULL != member->ds_ext_buff )
 	{
 		destroy_ext_buff_all( member->ds_ext_buff, combat_info );
+		member->ds_ext_buff = NULL;
 	}
 	//攻击时己方直接目标效果
 	if ( NULL != member->ext_sk_effect )
 	{
 		destroy_ext_effect_all( member->ext_sk_effect, combat_info );
+		member->ext_sk_effect = NULL;
 	}
 	if ( NULL != member->ext_damage_eff )
 	{
 		destroy_ext_effect_all( member->ext_damage_eff, combat_info );
+		member->ext_damage_eff = NULL;
 	}
 	if ( NULL != member->ext_self_buff )
 	{
-		destroy_ext_buff_all( member->ext_self_buff, combat_info );
+		//destroy_ext_buff_all( member->ext_self_buff, combat_info );
+		member->ext_self_buff = NULL;
 	}
 	if ( NULL != member->buff_add_time )
 	{
-		destroy_buff_addtime( member->buff_add_time, combat_info );
+		//destroy_buff_addtime( member->buff_add_time, combat_info );
+		member->buff_add_time = NULL;
 	}
 	if ( NULL != member->ext_object_buff )
 	{
-		destroy_ext_buff_all( member->ext_object_buff, combat_info );
+		//destroy_ext_buff_all( member->ext_object_buff, combat_info );
+		member->ext_object_buff = NULL;
 	}
 	//使用的怒气技能清除
 	if ( NULL != member->anger_skill )
 	{
 		destroy_use_skill( member->anger_skill, combat_info );
+		member->anger_skill = NULL;
 	}
 	//使用的斗气技能清除
 	if ( NULL != member->vigour_skill )
 	{
 		destroy_use_skill( member->vigour_skill, combat_info );
+		member->vigour_skill = NULL;
 	}
 	//清除格子
 	if ( ATTACK_SIDE == member->side )
@@ -1612,7 +1619,6 @@ void clean_member_data( fight_unit_t *member )
 	{
 		combat_info->def_member[ member->cell_id ] = NULL;
 	}
-	//回收fight_unit_t
 	destroy_fight_unit( member, combat_info );
 }
 
@@ -1657,6 +1663,10 @@ void init_first_fight()
 	memset( GLOBAL_VARS.buff_info_pool, 0,  sizeof( buff_t* ) * DEF_SKILL_BUFF_NUM );
 	//初始化技能效果
 	init_skill_effect();
+	struct timeval tp_time;
+	float timeuse;
+	gettimeofday( &tp_time, NULL );
+	srand( tp_time.tv_usec );
 }
 
 /**
@@ -1828,13 +1838,19 @@ int read_fight_config_dat_file( char *file_path )
 	protocol_result_t read_result_pool;
 	read_result_pool.pos = 0;
 	read_result_pool.error_code = 0;
-	read_result_pool.max_pos = pack_head.size * 4;
-	read_result_pool.str = ( char* )malloc( read_result_pool.max_pos );
-	proto_skill_static_t *skill_static = read_skill_static( &data_packet, &read_result_pool );
+	size_read_skill_static( &data_packet, &read_result_pool );
 	if ( read_result_pool.error_code )
 	{
 		fprintf( stderr, "The skill data read error:%d!\n", read_result_pool.error_code );
 		return -3;
+	}
+	printf( "\nsize:%d, max_size:%d\n", pack_head.size, read_result_pool.max_pos );
+	read_result_pool.str = ( char* )malloc( read_result_pool.max_pos );
+	proto_skill_static_t *skill_static = read_skill_static( &data_packet, &read_result_pool );
+	if ( read_result_pool.error_code )
+	{
+		fprintf( stderr, "Protocol read error:%d!\n", read_result_pool.error_code );
+		return -4;
 	}
 	//状态列表
 	read_skill_buff_config( skill_static->buff_list );

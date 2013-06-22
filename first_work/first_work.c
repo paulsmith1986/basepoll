@@ -15,7 +15,6 @@ const zend_function_entry first_work_functions[] = {
 	PHP_FE( first_set_timeout, NULL )
 	PHP_FE( first_signal_fd, NULL )
 	PHP_FE( first_socket_fd, NULL )
-	PHP_FE( first_join_im, NULL )
 	PHP_FE( first_send_pack, NULL )
 	{NULL, NULL, NULL}	/* Must be the last line in first_work_functions[] */
 };
