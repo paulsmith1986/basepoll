@@ -1837,6 +1837,7 @@ int read_fight_config_dat_file( char *file_path )
 	check_read_ret( read_ret );
 	protocol_result_t read_result_pool;
 	read_result_pool.pos = 0;
+	read_result_pool.max_pos = 0;
 	read_result_pool.error_code = 0;
 	size_read_skill_static( &data_packet, &read_result_pool );
 	if ( read_result_pool.error_code )

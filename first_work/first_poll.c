@@ -227,7 +227,7 @@ PHP_FUNCTION ( first_poll )
 			array_init( tmp_result );
 			first_poll_struct_t *fd_struct = (first_poll_struct_t*)events[ i ].data.ptr;
 			fd_struct->is_return = 1;
-			int event_type;
+			int event_type = 0;
 			switch ( fd_struct->fd_type )
 			{
 				case FD_TYPE_LISTEN:
@@ -245,6 +245,7 @@ PHP_FUNCTION ( first_poll )
 						//设置为非阻塞
 						set_non_block( connfd );
 						first_poll_add( connfd, FD_TYPE_SOCKET );
+						event_type = 6;
 					}
 				}
 				break;

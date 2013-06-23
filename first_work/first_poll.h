@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include "first.h"
 #include "proto_c.h"
-#include "proto_size_client.h"
+#include "proto_size.h"
 #include "first_protocol.h"
 #include "encode_client.h"
 #define MAX_LOOP_TIMEOUT 16 * 1000							//事件等待时间

@@ -7,7 +7,7 @@
 
 #define MAX_LIST_RECURSION			128					//最多printf缩进
 #define MAX_READ_PACK_SIZE			1024 * 64			//最大支持的数据包大小
-#define PROTOCOL_DATA_LEN			1024 * 16			//原始包大小
+#define PROTOCOL_DATA_LEN			1024 * 32			//原始包大小
 #define PROTO_ERROR_OVERFLOW		1					//结果溢出
 #define PROTO_ERROR_SIZEERROR		2					//包大小出错
 #define PROTO_ERROR_TOOBIG_DATA		3					//包数据太大
