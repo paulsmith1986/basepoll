@@ -245,7 +245,7 @@ PHP_FUNCTION ( first_poll )
 						//设置为非阻塞
 						set_non_block( connfd );
 						first_poll_add( connfd, FD_TYPE_SOCKET );
-						event_type = 6;
+						event_type = FIRST_NEW_CONNECTION;
 					}
 				}
 				break;
@@ -254,7 +254,7 @@ PHP_FUNCTION ( first_poll )
 					if ( events[ i ].events & EPOLLRDHUP )
 					{
 						first_close_fd( fd_struct );
-						event_type = 0;
+						event_type = FIRST_SOCKET_CLOSE;
 						fd_struct->is_return = 0;
 					}
 					else
@@ -264,29 +264,29 @@ PHP_FUNCTION ( first_poll )
 						{
 							//主处理函数
 							read_socket_data( fd_struct, tmp_result );
-							event_type = 1;
+							event_type = FIRST_SOCKET_DATA;
 						}
 						//响应OUT事件
 						if ( events[ i ].events & EPOLLOUT )
 						{
 							first_on_socket_write( fd_struct );
 							fd_struct->is_return = 0;
-							event_type = 2;
+							event_type = FIRST_SOCKET_WRITE;
 						}
 					}
 					break;
 				}
 				case FD_TYPE_EVENT:		//唤醒事件
 					//poll_handler_->on_event_fd( fd_struct );
-					event_type = 3;
+					event_type = FIRST_EVENT_WAKEUP;
 				break;
 				case FD_TYPE_TIMER:		//倒计时事件
 					//poll_handler_->on_timer_fd( fd_struct );
-					event_type = 4;
+					event_type = FIRST_TIME_UP;
 				break;
 				case FD_TYPE_SIGNAL:	//信号事件
 					//poll_handler_->on_signal_fd( fd_struct );
-					event_type = 5;
+					event_type = FIRST_SIGNAL;
 				break;
 				default:
 					fprintf( stderr, "Unkown fd type: %d\n", fd_struct->fd_type );

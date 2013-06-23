@@ -9,5 +9,13 @@
 #define FIRST_SEND_CACHE 64 * 1024			//发送缓冲区
 #define PACK_POOL_SIZE 16 * 1024			//发送协议包大小
 
+#define FIRST_NEW_CONNECTION 1
+#define FIRST_SOCKET_CLOSE 2
+#define FIRST_SOCKET_DATA 3
+#define FIRST_SOCKET_WRITE 4
+#define FIRST_EVENT_WAKEUP 5
+#define FIRST_TIME_UP 6
+#define FIRST_SIGNAL 7
+
 #define FIRST_SWITCH_DEBUG					//调试开关
 #endif
