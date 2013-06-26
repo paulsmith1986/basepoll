@@ -241,7 +241,6 @@ PHP_FUNCTION ( first_poll )
 					}
 					else
 					{
-						printf( "new connection\n" );
 						//设置为非阻塞
 						set_non_block( connfd );
 						first_poll_add( connfd, FD_TYPE_SOCKET );
@@ -255,7 +254,6 @@ PHP_FUNCTION ( first_poll )
 					{
 						first_close_fd( fd_struct );
 						event_type = FIRST_SOCKET_CLOSE;
-						fd_struct->is_return = 0;
 					}
 					else
 					{
@@ -274,8 +272,8 @@ PHP_FUNCTION ( first_poll )
 							event_type = FIRST_SOCKET_WRITE;
 						}
 					}
-					break;
 				}
+				break;
 				case FD_TYPE_EVENT:		//唤醒事件
 					//poll_handler_->on_event_fd( fd_struct );
 					event_type = FIRST_EVENT_WAKEUP;
@@ -655,6 +653,7 @@ void first_on_socket_read( first_poll_struct_t *fd_info, protocol_packet_t *data
 		break;
 		default: //其它包
 			php_unpack_protocol_data( pack_head->pack_id, data_pack, tmp_result );
+			add_assoc_long( tmp_result, "pack_id", pack_head->pack_id );
 		break;
 	}
 }
@@ -679,6 +678,7 @@ int first_im_proxy_pack( protocol_packet_t *proxy_pack, zval *tmp_result )
 		}
 		break;
 	}
+	add_assoc_long( tmp_result, "pack_id", pack_head->pack_id );
 	//出错的情况判断
 	if ( 0 == proxy_pack->pos )
 	{
