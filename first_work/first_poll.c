@@ -283,8 +283,19 @@ PHP_FUNCTION ( first_poll )
 					event_type = FIRST_TIME_UP;
 				break;
 				case FD_TYPE_SIGNAL:	//信号事件
-					//poll_handler_->on_signal_fd( fd_struct );
+				{
+					struct signalfd_siginfo fdsi;
+					int re = read( fd_struct->fd, &fdsi, sizeof( struct signalfd_siginfo ) );
+					if ( re != sizeof( struct signalfd_siginfo ) )
+					{
+						fd_struct->is_return = 0;
+					}
+					else
+					{
+						add_assoc_long( tmp_result, "signal", fdsi.ssi_signo );
+					}
 					event_type = FIRST_SIGNAL;
+				}
 				break;
 				default:
 					fprintf( stderr, "Unkown fd type: %d\n", fd_struct->fd_type );
