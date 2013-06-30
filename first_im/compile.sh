@@ -5,11 +5,11 @@ sed "s@{\$im_version}@ `date +'%Y-%m-%d %H:%M:%S'`@g" -i im_common.h
 case "$1" in
 	debug)
 		echo " 调试版本"
-		sed 's/YILE_DEBUG_SWITCH/YILE_DEBUG/g' -i im_common.h	
+		sed 's/FIRST_DEBUG_SWITCH/FIRST_DEBUG/g' -i im_common.h	
 	;;
 	*)
 		echo " 正式版本"
-		sed 's/YILE_DEBUG_SWITCH/YILE_NO_DEBUG/g' -i im_common.h
+		sed 's/FIRST_DEBUG_SWITCH/FIRST_NO_DEBUG/g' -i im_common.h
 	;;
 esac
 

@@ -16,6 +16,7 @@
 #define PROTO_READ_PACK_ID_ERROR	6					//读到的数据包id不是想要的数据包id
 #define PROTO_PACK_ERROR			7					//打包数据的时候出错
 #define PROTO_PACK_DATA_MISS		8					//打包数据不存在
+#define PROTO_UNKOWN_PACK			9					//未知协议
 
 #define MOD_ADLER					65521				//用于adler32校验
 

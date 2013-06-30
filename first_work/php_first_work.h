@@ -30,6 +30,10 @@ PHP_FUNCTION(first_set_timeout);
 PHP_FUNCTION(first_signal_fd);
 PHP_FUNCTION(first_socket_fd);
 PHP_FUNCTION(first_host);
+PHP_FUNCTION(first_getpid);
+PHP_FUNCTION(first_daemon);
+PHP_FUNCTION(first_setsid);
+PHP_FUNCTION(first_kill);
 //发送数据包
 PHP_FUNCTION ( first_send_pack );
 #ifdef ZTS

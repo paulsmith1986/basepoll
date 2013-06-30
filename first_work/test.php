@@ -5,4 +5,13 @@ function test_1 ()
 	first_send_pack( $fd, 25003, array( 'fpm_id' => 20 ) );
 }
 
-test_1();
+function test_2 ()
+{
+	var_dump( first_getpid() );
+}
+
+function test_3 ()
+{
+	var_dump( first_kill( 32059, 0 ) );
+}
+test_3();

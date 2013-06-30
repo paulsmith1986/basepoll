@@ -5,7 +5,7 @@ OBJ = task_server.o im_handle.o task.o role_task.o php_task.o proto_bin.o im.o i
 FLAGS= -Wall -g -O2
 CC = g++
 FIRST_INCLUDE = -I../first_base/ -I../first_protocol/protocol/include -L../first_protocol/protocol/lib -I../first_ini -L../first_ini -I../first_log -L../first_log -I../first_poll -L../first_poll
-FIRST_ARG = -lfirstprotocol -lfirstini -lfirstlog -lfirstpoll
+FIRST_ARG = -lfirstprotocol -lfirstini -lfirstlog -lfirstpoll -lcrypto
 
 im: $(OBJ) 
 	$(CC) $(FLAGS) -g -o im $(OBJ) $(FIRST_INCLUDE) $(FIRST_ARG) 

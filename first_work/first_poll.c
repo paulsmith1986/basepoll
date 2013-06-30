@@ -77,6 +77,7 @@ PHP_FUNCTION ( first_signal_fd )
 	{
 		return;
 	}
+	check_epoll_init();
 	int key_len;
 	ulong index_key;
 	zval **z_item;
@@ -279,8 +280,15 @@ PHP_FUNCTION ( first_poll )
 					event_type = FIRST_EVENT_WAKEUP;
 				break;
 				case FD_TYPE_TIMER:		//倒计时事件
-					//poll_handler_->on_timer_fd( fd_struct );
+				{
+					uint64_t howmany;
+					int re = read( fd_struct->fd, &howmany, sizeof( howmany ) );
+					if ( re != sizeof( howmany ) )
+					{
+						fd_struct->is_return = 0;
+					}
 					event_type = FIRST_TIME_UP;
+				}
 				break;
 				case FD_TYPE_SIGNAL:	//信号事件
 				{
@@ -321,6 +329,43 @@ PHP_FUNCTION ( first_poll )
 	{
 		RETURN_NULL();
 	}
+}
+
+//获取进程id
+PHP_FUNCTION( first_getpid )
+{
+	long pid = getpid();
+	RETURN_LONG( pid );
+}
+//守护进程的方式运行
+PHP_FUNCTION( first_daemon )
+{
+	pid_t id = fork();
+	if ( -1 == id )
+	{
+		zend_error( E_ERROR, "Can not fork()\n" );
+	}
+	RETURN_LONG( (long)id );
+}
+//setsid
+PHP_FUNCTION( first_setsid )
+{
+	RETURN_LONG( (long)setsid() );
+}
+
+//给某个进程发送信号
+PHP_FUNCTION( first_kill )
+{
+	long pid, sig = SIGTERM;
+	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "l|l", &pid, &sig ) == FAILURE )
+	{
+		return;
+	}
+	if ( kill( pid, sig ) < 0 )
+	{
+		RETURN_FALSE;
+  	}
+	RETURN_TRUE;
 }
 
 /**

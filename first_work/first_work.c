@@ -16,6 +16,10 @@ const zend_function_entry first_work_functions[] = {
 	PHP_FE( first_signal_fd, NULL )
 	PHP_FE( first_socket_fd, NULL )
 	PHP_FE( first_send_pack, NULL )
+	PHP_FE( first_getpid, NULL )
+	PHP_FE( first_daemon, NULL )
+	PHP_FE( first_setsid, NULL )
+	PHP_FE( first_kill, NULL )
 	{NULL, NULL, NULL}	/* Must be the last line in first_work_functions[] */
 };
 
