@@ -32,7 +32,7 @@ channel_map_t CHANNEL_LIST;
 //场景列表
 scene_map_t SCENE_LIST;
 
-//用户退出临时数据管理
+//用户池
 StructPool<role_struct_t*> ROLE_STRUCT_POOL = StructPool<role_struct_t*>( 1500, sizeof( role_struct_t ) );
 //设置捕捉信号
 void set_demo_signal( FirstPoller &main_poller );

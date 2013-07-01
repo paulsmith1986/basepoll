@@ -678,27 +678,6 @@ buff_t *find_buff_info( int buff_id );
 int read_fight_config_dat_file( char *file_path );
 
 /**
- * 读取配置文件中的技能效果
- * @param	config_file		文件句柄
- * @param	read_num		读取个数
- * @param	is_error		是否出错的标志
- */
-sk_effect_t *read_fight_config_effect( FILE *config_file, int read_num, int *is_error );
-
-/**
- * 读取配置文件中的技能状态
- * @param	config_file		文件句柄
- * @param	read_num		读取个数
- * @param	is_error		是否出错的标志
- */
-sk_buff_t *read_fight_config_buff( FILE *config_file, int read_num, int *is_error );
-
-/**
- * 读取字符串
- */
-char *debug_read_config_name( FILE *config_file, int *is_error );
-
-/**
  * 成员阵亡的回调函数
  * @param	combat_info		战斗信息
  * @param	side			立场
