@@ -73,6 +73,7 @@ void FirstPoller::poll( int interval )
 				if ( NULL != tmp_info->un_read_pack )
 				{
 					delete_protocol_packet( tmp_info->un_read_pack );
+					tmp_info->un_read_pack = NULL;
 				}
 
 				if ( NULL != tmp_info->ext_data )
@@ -318,6 +319,7 @@ void FirstPoller::read_socket_data( fd_struct_t *fd_info )
 	{
 		read_packet = fd_info->un_read_pack;
 		need_read = read_packet->max_pos - read_packet->pos;
+		fd_info->un_read_pack = NULL;
 	}
 	else
 	{
@@ -407,11 +409,8 @@ void FirstPoller::read_socket_data( fd_struct_t *fd_info )
 							//拷贝数据
 							new_pack->pos = read_packet->pos;
 							memcpy( new_pack->data, read_packet->data, read_packet->pos );
-							//如果不是栈内内存 释放包数据
-							if ( read_packet != &stack_read_packet )
-							{
-								delete_protocol_packet( read_packet );
-							}
+							//尝试内存释放
+							try_delete_protocol_packet( read_packet, &stack_read_packet, fd_info );
 							read_packet = new_pack;
 						}
 					}
@@ -422,12 +421,9 @@ void FirstPoller::read_socket_data( fd_struct_t *fd_info )
 				{
 					read_packet->pos = sizeof( packet_head_t );
 					poll_handler_->on_socket_fd ( fd_info, read_packet );
+					//尝试内存释放
+					try_delete_protocol_packet( read_packet, &stack_read_packet, fd_info );
 					break;
-				}
-				//如果不是栈内内存
-				if ( read_packet != &stack_read_packet )
-				{
-					delete_protocol_packet( read_packet );
 				}
 			}
 			else

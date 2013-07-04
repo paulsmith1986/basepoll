@@ -5,6 +5,17 @@
 #include <map>
 #include "poll_handler.h"
 #include "struct_pool.h"
+
+#define try_delete_protocol_packet( tmp_pack, stack_pack, fd_info )			\
+	if ( tmp_pack != stack_pack )											\
+	{																		\
+		if ( tmp_pack == fd_info->un_read_pack )							\
+		{																	\
+			fd_info->un_read_pack = NULL;									\
+		}																	\
+		delete_protocol_packet( tmp_pack );									\
+	}
+
 class FirstPoller
 {
 	public:
