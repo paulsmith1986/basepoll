@@ -68,9 +68,6 @@ PHP_MINIT_FUNCTION(first_work)
 
 PHP_MSHUTDOWN_FUNCTION(first_work)
 {
-	/* uncomment this line if you have INI entries
-	UNREGISTER_INI_ENTRIES();
-	*/
 	return SUCCESS;
 }
 
@@ -90,6 +87,7 @@ PHP_MINFO_FUNCTION(first_work)
 	php_info_print_table_header(2, "first_work support", "enabled");
 	php_info_print_table_end();
 }
+
 PHP_FUNCTION(first)
 {
 	char *arg = NULL;
