@@ -16,7 +16,6 @@ void first_create_poll()
 		fprintf( stderr, "Can not create epoll\n" );
 		abort();
 	}
-	first_poll_init_list();
 }
 
 //创建倒计时
@@ -177,7 +176,7 @@ PHP_FUNCTION ( first_host )
 //发送数据包
 PHP_FUNCTION ( first_send_pack )
 {
-	long fd;
+	long fd = 0;
 	long proto_id;
 	zval *data = NULL;
 	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "ll|a", &fd, &proto_id, &data ) == FAILURE )
@@ -203,13 +202,15 @@ PHP_FUNCTION ( first_send_pack )
 	php_pack_protocol_data( proto_id, hash_arr, pack_data_result );
 	if ( pack_data_result.error_code )
 	{
-		RETURN_FALSE;
+
+		ZVAL_FALSE( return_value );
 	}
 	else
 	{
 		protocol_send_pack( fd_info, pack_data_result );
-		RETURN_TRUE;
+		ZVAL_TRUE( return_value );
 	}
+	try_free_result_pack( pack_data_result );
 }
 
 //等待事件发生
@@ -366,6 +367,48 @@ PHP_FUNCTION( first_kill )
 		RETURN_FALSE;
   	}
 	RETURN_TRUE;
+}
+
+//给某个用户发消息
+PHP_FUNCTION(first_send_role)
+{
+	zval *proto_data;
+	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "a", &proto_data ) == FAILURE )
+	{
+		return;
+	}
+	HashTable *hash_arr = Z_ARRVAL_P( proto_data );
+	HashPosition pointer;
+	char RESULT_POOL_[ PACK_POOL_SIZE ];
+	protocol_result_t pack_data_result;
+	memset( &pack_data_result, 0, sizeof( protocol_result_t ) );
+	pack_data_result.max_pos = PACK_POOL_SIZE;
+	pack_data_result.str = RESULT_POOL_;
+	zval **item;
+	for ( zend_hash_internal_pointer_reset_ex( hash_arr, &pointer ); zend_hash_get_current_data_ex( hash_arr, (void**) &item, &pointer ) == SUCCESS; zend_hash_move_forward_ex( hash_arr, &pointer ) )
+	{
+		HashTable *item_arr = Z_ARRVAL_PP( item );
+		zval **z_proto_id;
+		zval **z_proto_value;
+		if ( SUCCESS == zend_hash_index_find( item_arr, 0, (void**) &z_proto_id ) && SUCCESS == zend_hash_index_find( item_arr, 1, (void**) &z_proto_value ) )
+		{
+			HashTable *value_arr = Z_ARRVAL_PP( z_proto_value );
+			php_pack_protocol_data( Z_LVAL_PP( z_proto_id ), value_arr, pack_data_result );
+			if ( pack_data_result.error_code )
+			{
+				break;
+			}
+		}
+	}
+	if ( 0 == pack_data_result.error_code )
+	{
+		ZVAL_STRINGL( return_value, pack_data_result.str, pack_data_result.pos, 1 );
+	}
+	else
+	{
+		ZVAL_FALSE( return_value );
+	}
+	try_free_result_pack( pack_data_result );
 }
 
 /**
@@ -709,7 +752,15 @@ void first_on_socket_read( first_poll_struct_t *fd_info, protocol_packet_t *data
 		break;
 		default: //其它包
 			php_unpack_protocol_data( pack_head->pack_id, data_pack, tmp_result );
-			add_assoc_long( tmp_result, "pack_id", pack_head->pack_id );
+			//出错判断
+			if ( 0 == data_pack->pos )
+			{
+				fd_info->is_return = 0;
+			}
+			else
+			{
+				add_assoc_long( tmp_result, "pack_id", pack_head->pack_id );
+			}
 		break;
 	}
 }
@@ -721,20 +772,7 @@ int first_im_proxy_pack( protocol_packet_t *proxy_pack, zval *tmp_result )
 {
 	packet_head_t *pack_head = ( packet_head_t* )proxy_pack->data;
 	proxy_pack->pos = sizeof( packet_head_t );
-	switch( pack_head->pack_id )
-	{
-		case 101:
-		{
-			soread_account_new( proxy_pack, tmp_result );
-		}
-		break;
-		case 103:
-		{
-			soread_account_login( proxy_pack, tmp_result );
-		}
-		break;
-	}
-	add_assoc_long( tmp_result, "pack_id", pack_head->pack_id );
+	php_unpack_protocol_data( pack_head->pack_id, proxy_pack, tmp_result );
 	//出错的情况判断
 	if ( 0 == proxy_pack->pos )
 	{
@@ -742,6 +780,7 @@ int first_im_proxy_pack( protocol_packet_t *proxy_pack, zval *tmp_result )
 	}
 	else
 	{
+		add_assoc_long( tmp_result, "pack_id", pack_head->pack_id );
 		return 1;
 	}
 }

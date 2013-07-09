@@ -108,12 +108,14 @@ struct packet_head_t{
 	}																				\
 	re_pack->pos += len
 
-
-//服务器端数据异常处理
-#define catch_error_packet( byte_pack, fd_info, error_code )
-//客户端数据异常处理
-#define recv_error_packet( byte_pack, error_code )
-
+//尝试释放内存
+#define try_free_result_pack( pack )									\
+	if ( pack.is_resize )												\
+	{																	\
+		free( pack.str );												\
+		pack.str = NULL;												\
+		pack.pos = pack.max_pos = 0;									\
+	}
 
 /**
  * adler32效验

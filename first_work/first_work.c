@@ -3,6 +3,7 @@
 #endif
 
 #include "first.h"
+#include "fd_list.h"
 
 static int le_first_work;
 
@@ -20,6 +21,7 @@ const zend_function_entry first_work_functions[] = {
 	PHP_FE( first_daemon, NULL )
 	PHP_FE( first_setsid, NULL )
 	PHP_FE( first_kill, NULL )
+	PHP_FE( first_pack_data, NULL )
 	{NULL, NULL, NULL}	/* Must be the last line in first_work_functions[] */
 };
 
@@ -47,9 +49,7 @@ ZEND_GET_MODULE(first_work)
 
 PHP_MINIT_FUNCTION(first_work)
 {
-	/* If you have INI entries, uncomment these lines
-	REGISTER_INI_ENTRIES();
-	*/
+	first_poll_init_list();
 	REGISTER_LONG_CONSTANT( "FIRST_NEW_CONNECTION", 1, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT( "FIRST_SOCKET_CLOSE", 2, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT( "FIRST_SOCKET_DATA", 3, CONST_CS | CONST_PERSISTENT);

@@ -20,6 +20,10 @@ void request_im_join_server( fd_struct_t *fd_info, proto_im_join_server_t *req_p
 	fd_struct_t *role_fd = role_fd_info( req_pack->role_id );
 	if ( NULL != role_fd )
 	{
+		if ( role_fd->fd == fd_info->fd )
+		{
+			return;
+		}
 		if ( 0 == req_pack->flag )
 		{
 			encode_im_role_online( send_pack );

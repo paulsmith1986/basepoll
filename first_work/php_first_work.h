@@ -34,6 +34,8 @@ PHP_FUNCTION(first_getpid);
 PHP_FUNCTION(first_daemon);
 PHP_FUNCTION(first_setsid);
 PHP_FUNCTION(first_kill);
+PHP_FUNCTION(first_pack_data);
+
 //发送数据包
 PHP_FUNCTION ( first_send_pack );
 #ifdef ZTS

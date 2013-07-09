@@ -4,7 +4,7 @@ int FIRST_POOL_FD_SIZE = 0;
 //fd list的大小
 int FIRST_POOL_FD_MAX_SIZE = FIRST_POLL_INIT_SIZE;
 //存放fd_list
-first_poll_struct_t **FIRST_POOL_FD_LIST;
+first_poll_struct_t **FIRST_POOL_FD_LIST = NULL;
 /**
  * 初始化fd_list
  */
