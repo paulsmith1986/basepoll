@@ -370,7 +370,7 @@ PHP_FUNCTION( first_kill )
 }
 
 //给某个用户发消息
-PHP_FUNCTION(first_send_role)
+PHP_FUNCTION(first_pack_data)
 {
 	zval *proto_data;
 	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "a", &proto_data ) == FAILURE )
@@ -387,11 +387,23 @@ PHP_FUNCTION(first_send_role)
 	zval **item;
 	for ( zend_hash_internal_pointer_reset_ex( hash_arr, &pointer ); zend_hash_get_current_data_ex( hash_arr, (void**) &item, &pointer ) == SUCCESS; zend_hash_move_forward_ex( hash_arr, &pointer ) )
 	{
+		if ( IS_ARRAY != Z_TYPE_PP( item ) )
+		{
+			continue;
+		}
 		HashTable *item_arr = Z_ARRVAL_PP( item );
 		zval **z_proto_id;
 		zval **z_proto_value;
 		if ( SUCCESS == zend_hash_index_find( item_arr, 0, (void**) &z_proto_id ) && SUCCESS == zend_hash_index_find( item_arr, 1, (void**) &z_proto_value ) )
 		{
+			if( IS_LONG != Z_TYPE_PP( z_proto_id ) )
+			{
+				convert_to_long( *z_proto_id );
+			}
+			if ( IS_ARRAY != Z_TYPE_PP( z_proto_value ) )
+			{
+				continue;
+			}
 			HashTable *value_arr = Z_ARRVAL_PP( z_proto_value );
 			php_pack_protocol_data( Z_LVAL_PP( z_proto_id ), value_arr, pack_data_result );
 			if ( pack_data_result.error_code )

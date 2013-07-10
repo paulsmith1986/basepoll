@@ -12,6 +12,7 @@ function test_2 ()
 
 function test_3 ()
 {
-	var_dump( first_kill( 32059, 0 ) );
+	$re = first_pack_data( array( array( '101', array( 'error_no' => 10, 'error_arg' => array(), 'error_msg' => 'aaa' ) ), array( '101', array( 'error_no' => 10, 'error_arg' => array(), 'error_msg' => 'aaa' ) ),array( '101', array( 'error_no' => 10, 'error_arg' => array(), 'error_msg' => 'aaa' ) ), array( '101', array( 'error_no' => 10, 'error_arg' => array(), 'error_msg' => 'aaa' ) ), array( '101', array( 'error_no' => 10, 'error_arg' => array(), 'error_msg' => 'aaa' ) ),array( '101', array( 'error_no' => 10, 'error_arg' => array(), 'error_msg' => 'aaa' ) ) ) );
+	var_dump( $re );
 }
 test_3();

@@ -32,3 +32,11 @@ void request_php_join_server( fd_struct_t *fd_info, proto_php_join_server_t *req
 		IM_PROXY_OBJECT.add( fd_info );
 	}
 }
+
+/**
+ * pack_id: 20002 ping包
+ */
+void request_php_ping( fd_struct_t *fd_info )
+{
+
+}
