@@ -127,6 +127,24 @@ PHP_FUNCTION ( first_socket_fd )
 }
 
 //创建socket_fd
+PHP_FUNCTION ( first_close_fd )
+{
+	long fd;
+	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "l", &fd ) == FAILURE )
+	{
+		return;
+	}
+	first_poll_struct_t *fd_info = find_fd_info( fd );
+	if ( NULL == fd_info )
+	{
+		zend_error( E_WARNING, "Can not find fdstruct, fd:%d\n", fd );
+		RETURN_FALSE;
+	}
+	first_close_fd( fd_info );
+	RETURN_TRUE;
+}
+
+//创建socket_fd
 PHP_FUNCTION ( first_host )
 {
 	char *bind_ip;

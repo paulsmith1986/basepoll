@@ -35,6 +35,8 @@ PHP_FUNCTION(first_daemon);
 PHP_FUNCTION(first_setsid);
 PHP_FUNCTION(first_kill);
 PHP_FUNCTION(first_pack_data);
+PHP_FUNCTION(is_binary);
+PHP_FUNCTION(first_close_fd);
 
 //发送数据包
 PHP_FUNCTION ( first_send_pack );

@@ -21,6 +21,8 @@ extern FirstStream *OUT_LOG_STREAM;
 //版本号
 #define	VERSION						"{$im_version}"
 
+#define PROTOCOL_DEBUG
+
 //场景cell描述
 struct scene_apc_pack{
 	uint16_t				cell_num;						//格子数量

@@ -22,6 +22,8 @@ const zend_function_entry first_work_functions[] = {
 	PHP_FE( first_setsid, NULL )
 	PHP_FE( first_kill, NULL )
 	PHP_FE( first_pack_data, NULL )
+	PHP_FE( is_binary, NULL )
+	PHP_FE( first_close_fd, NULL )
 	{NULL, NULL, NULL}	/* Must be the last line in first_work_functions[] */
 };
 
@@ -100,4 +102,22 @@ PHP_FUNCTION(first)
 
 	len = spprintf(&strg, 0, "Congratulations! You have successfully modified ext/%.78s/config.m4. Module %.78s is now compiled into PHP.", "first_work", arg);
 	RETURN_STRINGL(strg, len, 0);
+}
+//判断是不是二进制串
+PHP_FUNCTION( is_binary )
+{
+	char *str;
+	int str_len;
+	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s", &str, &str_len ) == FAILURE )
+	{
+		return;
+	}
+	if ( strlen( str ) == str_len )
+	{
+		RETURN_FALSE;
+	}
+	else
+	{
+		RETURN_TRUE;
+	}
 }

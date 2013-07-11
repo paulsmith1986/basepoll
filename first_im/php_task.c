@@ -13,7 +13,7 @@ void request_role_proxy_re( fd_struct_t *fd_info, proto_role_proxy_re_t *req_pac
  */
 void request_fd_proxy_re( fd_struct_t *fd_info, proto_fd_proxy_re_t *req_pack )
 {
-
+	printf( "req_pack->fd:%d req_pack->fd_id:%d\n", req_pack->fd, req_pack->fd_id );
 }
 
 /**
