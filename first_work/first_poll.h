@@ -12,7 +12,6 @@
 #include "proto_c.h"
 #include "proto_size.h"
 #include "first_protocol.h"
-#include "encode_client.h"
 #define MAX_LOOP_TIMEOUT 16 * 1000							//事件等待时间
 #define FIRST_POLL_MAX_EVENT 32								//同时事件个数
 #define FIRST_POLL_INIT_SIZE 8								//初始化list大小
