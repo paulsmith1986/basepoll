@@ -5,7 +5,11 @@
  */
 void request_role_proxy_re( fd_struct_t *fd_info, proto_role_proxy_re_t *req_pack )
 {
-
+	fd_struct_t *aim_info = role_fd_info( req_pack->role_id );
+	if ( NULL != aim_info )
+	{
+		fd_info->poller->send_data( aim_info, req_pack->data->bytes, req_pack->data->len );
+	}
 }
 
 /**
@@ -13,7 +17,15 @@ void request_role_proxy_re( fd_struct_t *fd_info, proto_role_proxy_re_t *req_pac
  */
 void request_fd_proxy_re( fd_struct_t *fd_info, proto_fd_proxy_re_t *req_pack )
 {
-	printf( "req_pack->fd:%d req_pack->fd_id:%d\n", req_pack->fd, req_pack->fd_id );
+	if ( IM_PROXY_OBJECT.check_anonymity_fd( req_pack->fd, req_pack->fd_id ) )
+	{
+		FirstPoller *main_poller = fd_info->poller;
+		fd_struct_t *aim_info = main_poller->find_fd( req_pack->fd );
+		if ( NULL != aim_info )
+		{
+			main_poller->send_data( aim_info, req_pack->data->bytes, req_pack->data->len );
+		}
+	}
 }
 
 /**

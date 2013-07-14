@@ -22,8 +22,10 @@ const zend_function_entry first_work_functions[] = {
 	PHP_FE( first_setsid, NULL )
 	PHP_FE( first_kill, NULL )
 	PHP_FE( first_pack_data, NULL )
-	PHP_FE( is_binary, NULL )
 	PHP_FE( first_close_fd, NULL )
+
+	PHP_FE( is_binary, NULL )
+	PHP_FE( str_to_array, NULL )
 	{NULL, NULL, NULL}	/* Must be the last line in first_work_functions[] */
 };
 
@@ -103,7 +105,9 @@ PHP_FUNCTION(first)
 	len = spprintf(&strg, 0, "Congratulations! You have successfully modified ext/%.78s/config.m4. Module %.78s is now compiled into PHP.", "first_work", arg);
 	RETURN_STRINGL(strg, len, 0);
 }
-//判断是不是二进制串
+/**
+ * 判断是不是二进制串
+ */
 PHP_FUNCTION( is_binary )
 {
 	char *str;
@@ -119,5 +123,78 @@ PHP_FUNCTION( is_binary )
 	else
 	{
 		RETURN_TRUE;
+	}
+}
+
+/**
+ * 分隔字符串
+ */
+PHP_FUNCTION( str_to_array )
+{
+	char *str;
+	char *main_delim = ",";
+	char *sub_delim = ":";
+	int len1 = 0,len2 = 0,len3 = 0;
+	int argc = ZEND_NUM_ARGS();
+	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s|ss", &str, &len1, &main_delim, &len2, &sub_delim, &len3 ) == FAILURE )
+	{
+		return;
+	}
+	if ( ( 0 != len2 && 1 != len2 ) || ( 0 != len3 && 1 != len3 ) )
+	{
+		zend_error( E_ERROR, "str_to_array 分割符参数出错" );
+	}
+	array_init( return_value );
+	char *tmp_str;
+	char tmp_value[ 101 ];
+	if ( len1 > 0 ) //主字符串为空
+	{
+		++len1;
+		if ( len1 < 100 )
+		{
+			tmp_str = tmp_value;
+		}
+		else
+		{
+			tmp_str = ( char * ) pemalloc( len1, 1 );
+		}
+		memcpy( tmp_str, str, len1 );
+		char *main_p;
+		char *key_str, *value_str;
+		char *outer_ptr = NULL;
+		char *inner_ptr = NULL;
+		main_p = strtok_r( tmp_str, main_delim, &outer_ptr );
+		while ( main_p != NULL )
+		{
+			if ( 0 == strlen( main_p ) ) //字符串为空，或者未包括 子分割符
+			{
+				continue;
+			}
+			if ( strchr( main_p, *sub_delim ) )
+			{
+				key_str = strtok_r( main_p, sub_delim, &inner_ptr );
+				if ( NULL != key_str )
+				{
+					value_str = strtok_r( NULL, sub_delim, &inner_ptr );
+					if ( NULL != value_str )
+					{
+						add_assoc_string( return_value, key_str, value_str, 1 );
+					}
+					else
+					{
+						zend_error( E_NOTICE, "str_to_array函数处理时遇到奇怪字符串 %s", str );
+					}
+				}
+				else
+				{
+					zend_error( E_NOTICE, "str_to_array函数处理时遇到奇怪字符串 %s", str );
+				}
+			}
+			main_p = strtok_r( NULL, main_delim, &outer_ptr );
+		}
+		if ( tmp_str != tmp_value )
+		{
+			pefree( tmp_str, 1 );
+		}
 	}
 }

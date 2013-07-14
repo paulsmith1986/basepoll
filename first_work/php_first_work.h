@@ -37,6 +37,7 @@ PHP_FUNCTION(first_kill);
 PHP_FUNCTION(first_pack_data);
 PHP_FUNCTION(is_binary);
 PHP_FUNCTION(first_close_fd);
+PHP_FUNCTION(str_to_array);
 
 //发送数据包
 PHP_FUNCTION ( first_send_pack );

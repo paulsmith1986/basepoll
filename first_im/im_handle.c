@@ -26,7 +26,7 @@ void ImHandle::on_socket_fd( fd_struct_t *fd_info, protocol_packet_t *read_packe
 			}
 			proto_fd_proxy_t proxy_pack;
 			proxy_pack.fd = fd_info->fd;
-			proxy_pack.fd_id = add_anonymity( proxy_pack.fd );
+			proxy_pack.fd_id = IM_PROXY_OBJECT.add_anonymity( proxy_pack.fd );
 			proxy_pack.data = &request_pack;
 			encode_fd_proxy( proxy_new_pack, &proxy_pack );
 			IM_PROXY_OBJECT.proxy( &proxy_new_pack );
@@ -64,34 +64,9 @@ void ImHandle::on_socket_fd( fd_struct_t *fd_info, protocol_packet_t *read_packe
 	}
 }
 
-//加入匿名连接
-uint16_t ImHandle::add_anonymity( int fd )
-{
-	anonymity_list_t::iterator it = anonymity_list_.find( fd );
-	if ( it == anonymity_list_.end() )
-	{
-		if ( ++anonymity_index_ > 65535 )
-		{
-			anonymity_index_ = 0;
-		}
-		anonymity_list_[ fd ] = anonymity_index_;
-		return anonymity_index_;
-	}
-	else
-	{
-		return it->second;
-	}
-}
-
 //连接关闭回调
 void ImHandle::on_close( fd_struct_t *fd_info )
 {
-	//匿名连接检查
-	anonymity_list_t::iterator it = anonymity_list_.find( fd_info->fd );
-	if ( it != anonymity_list_.end() )
-	{
-		anonymity_list_.erase( it );
-	}
 	IM_PROXY_OBJECT.check_is_php_fd( fd_info );
 }
 
