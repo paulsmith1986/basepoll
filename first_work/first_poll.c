@@ -126,7 +126,7 @@ PHP_FUNCTION ( first_socket_fd )
 	RETURN_LONG( fd );
 }
 
-//创建socket_fd
+//关闭socket
 PHP_FUNCTION ( first_close_fd )
 {
 	long fd;
