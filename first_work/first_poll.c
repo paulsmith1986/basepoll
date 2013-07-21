@@ -220,7 +220,6 @@ PHP_FUNCTION ( first_send_pack )
 	php_pack_protocol_data( proto_id, hash_arr, pack_data_result );
 	if ( pack_data_result.error_code )
 	{
-
 		ZVAL_FALSE( return_value );
 	}
 	else
