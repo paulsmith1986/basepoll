@@ -1,48 +1,83 @@
 #include "task.h"
 
 /**
- * pack_id: 20007 将数据转发给某个用户
+ * pack_id: 20007 服务器给单个用户推数据
  */
-void request_role_proxy_re( fd_struct_t *fd_info, proto_role_proxy_re_t *req_pack )
+void request_so_push_role_data( fd_struct_t *fd_info, proto_so_push_role_data_t *req_pack )
 {
-	fd_struct_t *aim_info = role_fd_info( req_pack->role_id );
-	if ( NULL != aim_info )
+	fd_struct_t *role_fd = role_fd_info( req_pack->role_id );
+	if ( role_fd )
 	{
-		fd_info->poller->send_data( aim_info, req_pack->data->bytes, req_pack->data->len );
+		MAIN_POLLER.send_data( role_fd, req_pack->data->bytes, req_pack->data->len );
 	}
 }
 
 /**
- * pack_id: 20006 将数据转发给某个fd
+ * pack_id: 20008 服务器给某个频道推数据
  */
-void request_fd_proxy_re( fd_struct_t *fd_info, proto_fd_proxy_re_t *req_pack )
+void request_so_push_channel_data( fd_struct_t *fd_info, proto_so_push_channel_data_t *req_pack )
 {
-	if ( IM_PROXY_OBJECT.check_anonymity_fd( req_pack->fd, req_pack->fd_id ) )
-	{
-		FirstPoller *main_poller = fd_info->poller;
-		fd_struct_t *aim_info = main_poller->find_fd( req_pack->fd );
-		if ( NULL != aim_info )
-		{
-			main_poller->send_data( aim_info, req_pack->data->bytes, req_pack->data->len );
-		}
-	}
+
 }
 
 /**
- * pack_id: 20001 php进程加入server
+ * pack_id: 20009 服务器给所有人推数据
  */
-void request_php_join_server( fd_struct_t *fd_info, proto_php_join_server_t *req_pack )
+void request_so_push_world_data( fd_struct_t *fd_info, proto_so_push_world_data_t *req_pack )
 {
-	if ( 0 != strncmp( SUPER_KEY, req_pack->join_key, strlen( SUPER_KEY ) ) )
+
+}
+
+/**
+ * pack_id: 20010 服务器给一些人推数据
+ */
+void request_so_push_role_list_data( fd_struct_t *fd_info, proto_so_push_role_list_data_t *req_pack )
+{
+
+}
+
+/**
+ * pack_id: 20000 连接im服务器
+ */
+void request_so_php_join( fd_struct_t *fd_info, proto_so_php_join_t *req_pack )
+{
+	if ( 0 != strncmp( SUPER_KEY, req_pack->join_str, strlen( SUPER_KEY ) ) )
 	{
-		close_fd_info( fd_info );
+		MAIN_POLLER.close_fd( fd_info );
 		return;
 	}
-	fd_info->socket_type = req_pack->socket_type;
-	if ( SOCKET_TYPE_PHP_FPM == fd_info->socket_type )
+	if ( SOCKET_TYPE_FPM_MAIN == fd_info->socket_type )
 	{
 		IM_PROXY_OBJECT.add( fd_info );
 	}
+	proto_so_php_join_re_t out_data;
+	out_data.result = 0;
+	encode_so_php_join_re( result_pack, &out_data );
+	send_protocol( fd_info, result_pack );
+}
+
+/**
+ * pack_id: 21000 用户进入游戏
+ */
+void request_so_role_enter( fd_struct_t *fd_info, proto_so_role_enter_t *req_pack )
+{
+
+}
+
+/**
+ * pack_id: 21002 加入聊天频道
+ */
+void request_role_join_channel( fd_struct_t *fd_info, proto_role_join_channel_t *req_pack )
+{
+
+}
+
+/**
+ * pack_id: 21003 加入场景
+ */
+void request_role_join_scene( fd_struct_t *fd_info, proto_role_join_scene_t *req_pack )
+{
+
 }
 
 /**

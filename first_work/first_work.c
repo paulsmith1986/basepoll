@@ -18,6 +18,7 @@ const zend_function_entry first_work_functions[] = {
 	PHP_FE( first_socket_fd, NULL )
 	PHP_FE( first_send_pack, NULL )
 	PHP_FE( first_send_data, NULL )
+	PHP_FE( first_proxy_unpack, NULL )
 	PHP_FE( first_getpid, NULL )
 	PHP_FE( first_daemon, NULL )
 	PHP_FE( first_setsid, NULL )

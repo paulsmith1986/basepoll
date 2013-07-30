@@ -32,6 +32,7 @@ PHP_FUNCTION(first_socket_fd);
 PHP_FUNCTION(first_host);
 PHP_FUNCTION(first_send_pack);
 PHP_FUNCTION(first_send_data);
+PHP_FUNCTION(first_proxy_unpack);
 PHP_FUNCTION(first_getpid);
 PHP_FUNCTION(first_daemon);
 PHP_FUNCTION(first_setsid);

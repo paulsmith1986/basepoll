@@ -23,6 +23,10 @@ extern scene_map_t SCENE_LIST;
 //用户退出临时数据管理
 extern StructPool<role_struct_t*> ROLE_STRUCT_POOL;
 
+//发送栈内协议包
+#define send_protocol( fd_info, pack ) MAIN_POLLER.send_data( fd_info, pack.str, pack.pos )
+//发送协议包指针
+#define send_protocol_p( fd_info, pack ) MAIN_POLLER.send_data( fd_info, pack->str, pack->pos )
 
 /**
  * 查找一个玩家

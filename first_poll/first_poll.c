@@ -153,3 +153,14 @@ void set_timeout( int timer_fd, int ms )
 		OUT_ERROR << "timerfd_settime()" << fin;
 	}
 }
+
+//普通数据包
+int parse_normal_pack( fd_struct_t *fd_info, protocol_packet_t *read_packet )
+{
+	int re = 0;
+	if ( read_packet->pos < 1024 && 0 == strncmp( "GET ", read_packet->data, 4 ) )
+	{
+		re = 2;
+	}
+	return re;
+}

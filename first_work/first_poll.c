@@ -2,7 +2,6 @@
 #include "fd_list.h"
 #include "so_decode.h"
 #include "so_encode.h"
-#include "so_send.h"
 //关闭socket list
 first_poll_struct_t *CLOSE_FD_LIST = NULL;
 
@@ -161,11 +160,11 @@ PHP_FUNCTION ( first_host )
 	setsockopt( MAIN_SOCKET_FD, SOL_SOCKET, SO_REUSEADDR, &bReuseaddr, sizeof( int ) );
 
 	//发送缓冲区
-	int nSendBuf = YILE_SEND_CACHE;
+	int nSendBuf = FIRST_SEND_CACHE;
 	setsockopt( MAIN_SOCKET_FD, SOL_SOCKET, SO_SNDBUF, ( const char* )&nSendBuf, sizeof( int ) );
 
 	//接收缓冲区
-	int nRevBuf = YILE_SEND_CACHE;
+	int nRevBuf = FIRST_SEND_CACHE;
 	setsockopt( MAIN_SOCKET_FD, SOL_SOCKET, SO_RCVBUF, ( const char* )&nRevBuf, sizeof( int ) );
 
 	//把socket设置为非阻塞方式
@@ -287,8 +286,8 @@ PHP_FUNCTION ( first_poll )
 	{
 		return;
 	}
-	struct epoll_event listen_ev, events[ YILE_POLL_MAX_EVENT ];
-	int event_num = epoll_wait( MAIN_POOL_FD, events, YILE_POLL_MAX_EVENT, max_time );
+	struct epoll_event listen_ev, events[ FIRST_POLL_MAX_EVENT ];
+	int event_num = epoll_wait( MAIN_POOL_FD, events, FIRST_POLL_MAX_EVENT, max_time );
 	if ( event_num > 0 )
 	{
 		array_init( return_value );
@@ -317,7 +316,7 @@ PHP_FUNCTION ( first_poll )
 						//设置为非阻塞
 						set_non_block( connfd );
 						first_poll_add( connfd, FD_TYPE_SOCKET );
-						event_type = YILE_NEW_CONNECTION;
+						event_type = FIRST_NEW_CONNECTION;
 					}
 				}
 				break;
@@ -326,7 +325,7 @@ PHP_FUNCTION ( first_poll )
 					if ( events[ i ].events & EPOLLRDHUP )
 					{
 						first_close_fd( fd_struct );
-						event_type = YILE_SOCKET_CLOSE;
+						event_type = FIRST_SOCKET_CLOSE;
 					}
 					else
 					{
@@ -335,21 +334,21 @@ PHP_FUNCTION ( first_poll )
 						{
 							//主处理函数
 							read_socket_data( fd_struct, tmp_result );
-							event_type = YILE_SOCKET_DATA;
+							event_type = FIRST_SOCKET_DATA;
 						}
 						//响应OUT事件
 						if ( events[ i ].events & EPOLLOUT )
 						{
 							first_on_socket_write( fd_struct );
 							fd_struct->is_return = 0;
-							event_type = YILE_SOCKET_WRITE;
+							event_type = FIRST_SOCKET_WRITE;
 						}
 					}
 				}
 				break;
 				case FD_TYPE_EVENT:		//唤醒事件
 					//poll_handler_->on_event_fd( fd_struct );
-					event_type = YILE_EVENT_WAKEUP;
+					event_type = FIRST_EVENT_WAKEUP;
 				break;
 				case FD_TYPE_TIMER:		//倒计时事件
 				{
@@ -359,7 +358,7 @@ PHP_FUNCTION ( first_poll )
 					{
 						fd_struct->is_return = 0;
 					}
-					event_type = YILE_TIME_UP;
+					event_type = FIRST_TIME_UP;
 				}
 				break;
 				case FD_TYPE_SIGNAL:	//信号事件
@@ -374,7 +373,7 @@ PHP_FUNCTION ( first_poll )
 					{
 						add_assoc_long( tmp_result, "signal", fdsi.ssi_signo );
 					}
-					event_type = YILE_SIGNAL;
+					event_type = FIRST_SIGNAL;
 				}
 				break;
 				default:
@@ -472,6 +471,48 @@ PHP_FUNCTION( first_kill )
 		RETURN_FALSE;
   	}
 	RETURN_TRUE;
+}
+
+//协议解包
+PHP_FUNCTION( first_proxy_unpack )
+{
+	char *str;
+	int str_len;
+	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s", &str, &str_len ) == FAILURE )
+	{
+		return;
+	}
+	if ( str_len < sizeof( packet_head_t ) )
+	{
+		php_error( E_WARNING, "Unpack string is bad!\n" );
+		RETURN_NULL();
+	}
+	protocol_packet_t tmp_proxy_pack;
+	tmp_proxy_pack.pos = sizeof( packet_head_t );
+	tmp_proxy_pack.data = str;
+	tmp_proxy_pack.max_pos = str_len;
+
+	protocol_result_t read_result_pool;
+	memset( &read_result_pool, 0, sizeof( protocol_result_t ) );
+	char TMP_POOL[ PROTO_SIZE_SO_FPM_PROXY ];
+	read_result_pool.max_pos = sizeof( TMP_POOL );
+	read_result_pool.str = TMP_POOL;
+	proto_so_fpm_proxy_t *proxy_pack = read_so_fpm_proxy( &tmp_proxy_pack, &read_result_pool );
+	if ( read_result_pool.error_code )
+	{
+		ZVAL_NULL( return_value );
+	}
+	else
+	{
+		array_init( return_value );
+		packet_head_t *pack_head = ( packet_head_t* )proxy_pack->data->bytes;
+		add_assoc_long( return_value, "PROXY_PACK_ID", pack_head->pack_id );
+		add_assoc_long( return_value, "role_id", proxy_pack->role_id );
+		add_assoc_long( return_value, "session_id", proxy_pack->session_id );
+		char *data = (char *)&proxy_pack->data->bytes[ sizeof( packet_head_t ) ];
+		add_assoc_stringl( return_value, "proto_data", data, proxy_pack->data->len - sizeof( packet_head_t ), 1 );
+	}
+	try_free_result_pack( read_result_pool );
 }
 
 /**
@@ -745,17 +786,8 @@ void read_socket_data( first_poll_struct_t *fd_info, zval *tmp_result )
 				if( 0 == need_read || read_packet->pos > sizeof( packet_head_t ) )
 				{
 					packet_head_t *pack_head = ( packet_head_t* )read_packet->data;
-					if ( 60000 == pack_head->pack_id )
-					{
-						first_socket_proxy( fd_info, read_packet, tmp_result );
-					}
-					else
-					{
-						add_assoc_long( tmp_result, "pack_id", pack_head->pack_id );
-						add_assoc_long( tmp_result, "role_id", 0 );
-						add_assoc_long( tmp_result, "session_id", 0 );
-						add_assoc_stringl( tmp_result, "proto_data", read_packet->data, read_packet->pos, 1 );
-					}
+					add_assoc_long( tmp_result, "pack_id", pack_head->pack_id );
+					add_assoc_stringl( tmp_result, "proto_data", read_packet->data, read_packet->pos, 1 );
 					//如果不是栈内内存
 					if ( read_packet != &stack_read_packet )
 					{
@@ -795,6 +827,7 @@ void first_socket_proxy( first_poll_struct_t *fd_info, protocol_packet_t *data_p
 		fd_info->is_return = 0;
 		return;
 	}
+	printf( "session_id:u\n", proxy_pack->session_id );
 	packet_head_t *pack_head = ( packet_head_t* )proxy_pack->data->bytes;
 	add_assoc_long( tmp_result, "pack_id", pack_head->pack_id );
 	add_assoc_long( tmp_result, "role_id", proxy_pack->role_id );

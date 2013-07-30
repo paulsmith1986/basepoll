@@ -17,6 +17,11 @@ using namespace std;
 #endif
 #define EPOLL_WAIT_TIME				16 * 1000				//epoll循环等待时间
 
+//im_epoll事件处理
+ImHandle IM_POLL_HANDLE;
+//主poll类
+FirstPoller MAIN_POLLER = FirstPoller( 256, 3000, &IM_POLL_HANDLE );
+
 //php进程加入服务器key
 char *SUPER_KEY;
 //用户加入服务器的加密密钥

@@ -127,7 +127,6 @@ fd_struct_t* FirstPoller::create_fd_struct( int fd, fdType fd_type )
 	memset( tmp_info, 0, sizeof( fd_struct_t ) );
 	tmp_info->fd_type = fd_type;
 	tmp_info->fd = fd;
-	tmp_info->poller = this;
 	tmp_info->socket_type = 0;
 	set_fd_status( tmp_info, FD_STATE_IDLE );
 	fd_list_[ fd ] = tmp_info;
@@ -400,8 +399,28 @@ void FirstPoller::read_socket_data( fd_struct_t *fd_info )
 						//超过最大支持的数据包
 						if ( new_size > MAX_READ_PROTOCOL )
 						{
-							close_fd( fd_info );
-							return;
+							#ifdef YILE_NET_DEBUG
+							NET_OUT_LOG << "Special packet!" << fin;
+							#endif
+							//最多接收SMALL_PACKET这么多字符串
+							read_packet->pos += read( fd, read_packet->data + sizeof( packet_head_t ), SMALL_PACKET - sizeof( packet_head_t ) );
+							read_packet->max_pos = read_packet->pos;
+							//检查是不是可识别的字符串包
+							int normal_type = parse_normal_pack( fd_info, read_packet );
+							if ( 2 == normal_type )
+							{
+								poll_handler_->on_http( fd_info, read_packet );
+							}
+							//尝试内存释放
+							try_delete_protocol_packet( read_packet, &stack_read_packet, fd_info );
+							//不能被识别的字符串包
+							if ( !normal_type )
+							{
+								OUT_ERROR << "fd:" << fd_info->fd << "Unkown pack!" << fin;
+								close_fd( fd_info );
+								return;
+							}
+							break;
 						}
 						else
 						{

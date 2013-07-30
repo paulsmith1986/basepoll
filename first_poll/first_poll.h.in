@@ -47,12 +47,6 @@ extern FirstStream *NET_RUN_ERROR;
 #define NET_OUT_LOG *NET_RUN_LOG
 extern FirstStream *NET_RUN_LOG;
 #endif
-//发送栈内协议包
-#define send_protocol( fd_info, pack ) fd_info->poller->send_data( fd_info, pack.str, pack.pos )
-//发送协议包指针
-#define send_protocol_p( fd_info, pack ) fd_info->poller->send_data( fd_info, pack->str, pack->pos )
-//关闭一个连接
-#define close_fd_info( fd_info ) fd_info->poller->close_fd( fd_info )
 
 enum fdState {
 	FD_STATE_IDLE,			//空闲状态
@@ -70,15 +64,15 @@ enum fdType {
 class FirstPoller;
 //每一个连接的详细信息
 struct fd_struct_t{
+	uint32_t				session_id;						//每个连接的初始id
 	int						fd;								//连接ID
 	int						un_send_len;					//未发出消息长度(写)
 	char*					un_send;						//未发出消息内容
 	protocol_packet_t*		un_read_pack;					//未处理完的数据包
 	void*					ext_data;						//扩展数据
-	FirstPoller*			poller;							//连接属于哪个poller管理
 	fdState					status;							//连接状态
 	fdType					fd_type;						//连接类型
-	uint8_t					socket_type;					//socket类型
+	char					socket_type;					//socket类型
 };
 
 //设置为非阻塞状态函数
@@ -105,4 +99,7 @@ int daemonize();
 
 //唤醒
 void wakeup( int fd );
+
+//普通数据包
+int parse_normal_pack( fd_struct_t *fd_info, protocol_packet_t *read_packet );
 #endif

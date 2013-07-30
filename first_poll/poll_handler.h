@@ -34,6 +34,10 @@ class PollHandler {
 		{
 			return true;
 		}
+		//http请求
+		virtual void on_http( fd_struct_t *fd_info, protocol_packet_t *read_packet )
+		{
+		}
 
 };
 #endif

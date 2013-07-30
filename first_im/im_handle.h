@@ -5,8 +5,8 @@
 #include "poller.h"
 #include "im_proxy.h"
 #include "poll_handler.h"
+#include "im_common.h"
 #include "task_server.h"
-
 //im proxy
 extern ImProxy IM_PROXY_OBJECT;
 

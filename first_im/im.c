@@ -51,12 +51,8 @@ int main( int argc, char *argv[] )
 	{
 		daemonize();
 	}
-	//im_epoll事件处理
-	ImHandle im_poll_handle;
-	//主poll类
-	FirstPoller main_poller = FirstPoller( 256, 3000, &im_poll_handle );
 	//设置信号处理
-	set_demo_signal( main_poller );
+	set_demo_signal( MAIN_POLLER );
 	//读取配置
 	FirstIniReader conf_ini( configPath );
 	const char *bind_ip = conf_ini.read_ini_char( "host", "0.0.0.0" );
@@ -72,13 +68,13 @@ int main( int argc, char *argv[] )
 		NET_RUN_ERROR->setLogFile( new FirstLog( err_log_path, "error", EACH_DAY_ONE_FILE, false ) );
 		OUT_LOG_STREAM->setLogFile( new FirstLog( err_log_path, "log", EACH_DAY_ONE_FILE, false ) );
 	}
-	fd_struct_t *main_fd_struct = main_poller.create_fd_struct( main_fd, FD_TYPE_LISTEN );
-	main_poller.update_fd_event( main_fd_struct, EPOLL_CTL_ADD, EPOLLIN );
+	fd_struct_t *main_fd_struct = MAIN_POLLER.create_fd_struct( main_fd, FD_TYPE_LISTEN );
+	MAIN_POLLER.update_fd_event( main_fd_struct, EPOLL_CTL_ADD, EPOLLIN );
 	OUT_LOG << "Server start!" << fin;
 	conf_ini.unset();
 	while ( true )
 	{
-		main_poller.poll( EPOLL_WAIT_TIME );
+		MAIN_POLLER.poll( EPOLL_WAIT_TIME );
 	}
 }
 
@@ -88,7 +84,6 @@ void set_demo_signal( FirstPoller &main_poller )
 	sigset_t mask;
 	sigemptyset( &mask );
 	sigaddset( &mask, SIGINT );		//ctrl+c
-	sigaddset( &mask, SIGQUIT );	//类似退出命令
 	sigaddset( &mask, SIGTERM );	//kil
 	sigaddset( &mask, SIGPIPE );	//socket管道破裂
 	sigaddset( &mask, SIGHUP );		//用户session退出

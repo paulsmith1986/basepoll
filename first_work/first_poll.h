@@ -1,5 +1,5 @@
-#ifndef YILE_POOL_H
-#define YILE_POOL_H
+#ifndef FIRST_POOL_H
+#define FIRST_POOL_H
 #include <signal.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
@@ -12,10 +12,10 @@
 #include "proto_c.h"
 #include "proto_size.h"
 #include "first_protocol.h"
-#include "encode_client.h"
 #define MAX_LOOP_TIMEOUT 16 * 1000							//事件等待时间
-#define YILE_POLL_MAX_EVENT 32								//同时事件个数
-#define YILE_POLL_INIT_SIZE 8								//初始化list大小
+#define FIRST_POLL_MAX_EVENT 32								//同时事件个数
+#define FIRST_POLL_INIT_SIZE 8								//初始化list大小
+#define MAX_READ_DATA 1024 * 64								//缓冲区
 #define NET_SEND_CACHE 1024 * 64							//缓冲区
 #define BIG_PACKET 1024 * 32								//大数据包
 #define READ_EVENT	EPOLLIN|EPOLLRDHUP						//读事件
