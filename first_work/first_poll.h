@@ -1,5 +1,5 @@
-#ifndef FIRST_POOL_H
-#define FIRST_POOL_H
+#ifndef YILE_POOL_H
+#define YILE_POOL_H
 #include <signal.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
@@ -12,19 +12,20 @@
 #include "proto_c.h"
 #include "proto_size.h"
 #include "first_protocol.h"
+#include "encode_client.h"
 #define MAX_LOOP_TIMEOUT 16 * 1000							//事件等待时间
-#define FIRST_POLL_MAX_EVENT 32								//同时事件个数
-#define FIRST_POLL_INIT_SIZE 8								//初始化list大小
+#define YILE_POLL_MAX_EVENT 32								//同时事件个数
+#define YILE_POLL_INIT_SIZE 8								//初始化list大小
 #define NET_SEND_CACHE 1024 * 64							//缓冲区
 #define BIG_PACKET 1024 * 32								//大数据包
-#define MAX_READ_DATA 1024 * 64								//最大读取数据包
 #define READ_EVENT	EPOLLIN|EPOLLRDHUP						//读事件
 #define WRITE_EVENT EPOLLOUT|EPOLLRDHUP						//写事件
+#define MAX_NORMAL_FD 5										//普通socket连接个数
 
 #define check_epoll_init() if ( -1 == MAIN_POOL_FD ) first_create_poll()
 
 //发送协议包
-#define protocol_send_pack( fd, pack ) first_send_data( fd, pack.str, pack.pos )
+#define send_protocol_pack( fd, pack ) first_send_data( fd, pack.str, pack.pos )
 static int MAIN_POOL_FD = -1;
 typedef enum first_poll_type first_poll_type;
 enum first_poll_type {
@@ -43,11 +44,14 @@ struct first_poll_struct_t{
 	char*					un_send;						//未发出消息内容
 	protocol_packet_t*		un_read_pack;					//未处理完的数据包
 	int						is_return;						//是否返回到php
-	first_poll_struct_t*	next;							//用于查找
+	first_poll_struct_t*	next;								//用于查找
 };
 
 //关闭socket list
 extern first_poll_struct_t *CLOSE_FD_LIST;
+
+//存放普通的socket连接(不受first_poll管理)
+extern int normal_socket_list[];
 /**
  * 初始化poll
  */
@@ -84,6 +88,26 @@ void first_close_fd( first_poll_struct_t *fd_info );
 void check_fd_close_list();
 
 /**
+ * 加入普通socket
+ */
+void add_normal_socket( int fd );
+
+/**
+ * 移除普通socket
+ */
+void remove_normal_socket( int fd );
+
+/**
+ * 判断是否是普通的fd
+ */
+int is_normal_socket( int fd );
+
+/**
+ * 初始化普通socket连接列表
+ */
+void init_normal_socket_list();
+
+/**
  * 发送数据
  */
 void first_send_data( first_poll_struct_t *fd_info, void *send_re, uint32_t total_send );
@@ -104,9 +128,9 @@ void delete_protocol_packet( protocol_packet_t *tmp_pack );
 protocol_packet_t *new_proto_packet( uint32_t data_len );
 
 /**
- * 数据到达
+ * 转发数据包
  */
-void first_on_socket_read(  first_poll_struct_t *fd_info, protocol_packet_t *data_pack, zval *tmp_result );
+void first_socket_proxy(  first_poll_struct_t *fd_info, protocol_packet_t *data_pack, zval *tmp_result );
 
 /**
  * 写事件
@@ -114,7 +138,8 @@ void first_on_socket_read(  first_poll_struct_t *fd_info, protocol_packet_t *dat
 void first_on_socket_write( first_poll_struct_t *fd_info );
 
 /**
- * 转发数据包
+ * 送数据包
  */
-int first_im_proxy_pack( protocol_packet_t *proxy_pack, zval *tmp_result );
+void normal_send_data( int fd, char *send_data, uint32_t total_len );
+
 #endif
