@@ -224,4 +224,9 @@ PHP_FUNCTION( first_unpack )
 	packet_head_t *pack_head = ( packet_head_t* )tmp_pack.data;
 	tmp_pack.max_pos = str_len;
 	php_unpack_protocol_data( pack_head->pack_id, &tmp_pack, return_value );
+	if ( 0 == tmp_pack.pos )
+	{
+		zval_dtor( return_value );
+		RETURN_NULL();
+	}
 }

@@ -53,6 +53,7 @@ inline fd_struct_t* ImProxy::get_proxy_fd()
 void ImProxy::add( fd_struct_t *fd_info )
 {
 	im_proxy_list_.push_back( fd_info );
+	OUT_LOG << "sizeof list:" << im_proxy_list_.size() << fin;
 }
 
 /**

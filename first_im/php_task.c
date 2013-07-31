@@ -46,6 +46,8 @@ void request_so_php_join( fd_struct_t *fd_info, proto_so_php_join_t *req_pack )
 		MAIN_POLLER.close_fd( fd_info );
 		return;
 	}
+	OUT_LOG << "socket_type:" << req_pack->socket_type << fin;
+	fd_info->socket_type = req_pack->socket_type;
 	if ( SOCKET_TYPE_FPM_MAIN == fd_info->socket_type )
 	{
 		IM_PROXY_OBJECT.add( fd_info );
