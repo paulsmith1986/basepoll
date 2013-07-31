@@ -769,7 +769,7 @@ void read_socket_data( first_poll_struct_t *fd_info, zval *tmp_result )
 					if ( read_packet->pool_size < new_size )
 					{
 						//超过最大支持的数据包
-						if ( new_size > MAX_READ_DATA )
+						if ( new_size > MAX_READ_PACK_SIZE )
 						{
 							fd_info->is_return = 0;
 							first_close_fd( fd_info );

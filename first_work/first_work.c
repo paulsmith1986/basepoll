@@ -4,7 +4,8 @@
 
 #include "first.h"
 #include "fd_list.h"
-
+#include "so_decode.h"
+#include "so_encode.h"
 static int le_first_work;
 
 const zend_function_entry first_work_functions[] = {
@@ -19,8 +20,9 @@ const zend_function_entry first_work_functions[] = {
 	PHP_FE( first_send_pack, NULL )
 	PHP_FE( first_send_data, NULL )
 	PHP_FE( first_proxy_unpack, NULL )
+	PHP_FE( first_unpack, NULL )
 	PHP_FE( first_getpid, NULL )
-	PHP_FE( first_daemon, NULL )
+	PHP_FE( first_fork, NULL )
 	PHP_FE( first_setsid, NULL )
 	PHP_FE( first_kill, NULL )
 	PHP_FE( first_close_fd, NULL )
@@ -199,4 +201,27 @@ PHP_FUNCTION( str_to_array )
 			pefree( tmp_str, 1 );
 		}
 	}
+}
+
+//协议解包
+PHP_FUNCTION( first_unpack )
+{
+	char *str;
+	int str_len;
+	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "s", &str, &str_len ) == FAILURE )
+	{
+		return;
+	}
+	if ( str_len < sizeof( packet_head_t ) )
+	{
+		php_error( E_WARNING, "Unpack string is bad!\n" );
+		RETURN_NULL();
+	}
+	protocol_packet_t tmp_pack;
+	tmp_pack.pos = sizeof( packet_head_t );
+	tmp_pack.data = str;
+	array_init( return_value );
+	packet_head_t *pack_head = ( packet_head_t* )tmp_pack.data;
+	tmp_pack.max_pos = str_len;
+	php_unpack_protocol_data( pack_head->pack_id, &tmp_pack, return_value );
 }
