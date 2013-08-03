@@ -33,6 +33,7 @@ PHP_FUNCTION(first_host);
 PHP_FUNCTION(first_send_pack);
 PHP_FUNCTION(first_send_data);
 PHP_FUNCTION(first_proxy_unpack);
+PHP_FUNCTION(first_pack);
 PHP_FUNCTION(first_unpack);
 PHP_FUNCTION(first_getpid);
 PHP_FUNCTION(first_fork);
@@ -41,6 +42,7 @@ PHP_FUNCTION(first_kill);
 PHP_FUNCTION(is_binary);
 PHP_FUNCTION(first_close_fd);
 PHP_FUNCTION(str_to_array);
+PHP_FUNCTION(first_set_fpm_type);
 
 //发送数据包
 PHP_FUNCTION ( first_send_pack );

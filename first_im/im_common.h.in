@@ -3,6 +3,7 @@
 #include <map>
 #include <list>
 #include <vector>
+#include <sys/time.h>
 #include "first_poll.h"
 #include "poller.h"
 #include "first_protocol.h"
@@ -28,6 +29,20 @@ extern FirstStream *OUT_LOG_STREAM;
 #define PROTOCOL_DEBUG
 
 extern FirstPoller MAIN_POLLER;
+
+#define main_poller_send_pack( fd_info, pack )								\
+	MAIN_POLLER.send_data( fd_info, pack.str, pack.pos );					\
+	if ( pack.is_resize )													\
+	{																		\
+		free( pack.str );													\
+	}
+
+#define main_poller_send_pack_p( fd_info, pack )							\
+	MAIN_POLLER.send_data( fd_info, pack->str, pack->pos );					\
+	if ( pack->is_resize )													\
+	{																		\
+		free( pack->str );													\
+	}
 
 //场景cell描述
 struct scene_apc_pack{
@@ -76,6 +91,9 @@ struct join_list_t{
 	channel_id_u		channel;
 	join_list_t*		next;
 };
+
+//产生范围从x 到 y的随机数
+int mt_rand( int x, int y );
 
 //用户信息
 struct role_struct_t {

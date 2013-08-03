@@ -20,12 +20,14 @@ const zend_function_entry first_work_functions[] = {
 	PHP_FE( first_send_pack, NULL )
 	PHP_FE( first_send_data, NULL )
 	PHP_FE( first_proxy_unpack, NULL )
+	PHP_FE( first_pack, NULL )
 	PHP_FE( first_unpack, NULL )
 	PHP_FE( first_getpid, NULL )
 	PHP_FE( first_fork, NULL )
 	PHP_FE( first_setsid, NULL )
 	PHP_FE( first_kill, NULL )
 	PHP_FE( first_close_fd, NULL )
+	PHP_FE( first_set_fpm_type, NULL )
 
 	PHP_FE( is_binary, NULL )
 	PHP_FE( str_to_array, NULL )
@@ -201,6 +203,37 @@ PHP_FUNCTION( str_to_array )
 			pefree( tmp_str, 1 );
 		}
 	}
+}
+
+//协议打包
+PHP_FUNCTION( first_pack )
+{
+	long pack_id;
+	zval *data_arr = NULL;
+	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "l|a", &pack_id, &data_arr ) == FAILURE )
+	{
+		return;
+	}
+	HashTable *hash_arr = NULL;
+	if ( NULL != data_arr )
+	{
+		hash_arr = Z_ARRVAL_P( data_arr );
+	}
+	char RESULT_POOL_[ PACK_POOL_SIZE ];
+	protocol_result_t pack_data_result;
+	memset( &pack_data_result, 0, sizeof( protocol_result_t ) );
+	pack_data_result.max_pos = PACK_POOL_SIZE;
+	pack_data_result.str = RESULT_POOL_;
+	php_pack_protocol_data( pack_id, hash_arr, pack_data_result );
+	if ( pack_data_result.error_code > 0 )
+	{
+		ZVAL_NULL( return_value );
+	}
+	else
+	{
+		ZVAL_STRINGL( return_value, pack_data_result.str, pack_data_result.pos, 1 );
+	}
+	try_free_result_pack( pack_data_result );
 }
 
 //协议解包

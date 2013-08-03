@@ -171,15 +171,5 @@ void first_printf_tab_string( char *re_char, int rank );
  */
 void protocol_packet_resize( protocol_packet_t *tmp_pack, uint32_t new_size );
 
-/**
- * bin转hex
- */
-unsigned char *first_bin2hex( const unsigned char *bin_char, int bin_len );
-
-/**
- * hex转bin
- */
-char *first_hex2bin( const unsigned char *hex_str, int hex_len, int *new_len );
-
 #endif	/* FIRST_PROTOCOL_H */
 

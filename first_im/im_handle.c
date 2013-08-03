@@ -39,12 +39,11 @@ void ImHandle::on_socket_fd( fd_struct_t *fd_info, protocol_packet_t *read_packe
 		proxy_pack.role_id = role_id;
 		proxy_pack.session_id = fd_info->session_id;
 		encode_so_fpm_proxy( proxy_new_pack, &proxy_pack );
-		IM_PROXY_OBJECT.proxy( &proxy_new_pack );
+		IM_PROXY_OBJECT.proxy( &proxy_new_pack, role_id );
 	}
 	//10000 之间 20000的协议是聊天相关的
 	else if ( pack_head->pack_id < 20000 )
 	{
-		//10000号外是加入服务器
 		if ( NULL == fd_info->ext_data )
 		{
 			#ifdef FIRST_DEBUG

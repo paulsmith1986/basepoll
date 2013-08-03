@@ -59,6 +59,12 @@ int main( int argc, char *argv[] )
 	int port = conf_ini.read_ini_int( "port", 6666 );
 	SUPER_KEY = strdup( conf_ini.read_ini_char( "super_key" ) );
 	LOGIN_KEY = strdup( conf_ini.read_ini_char( "login_key" ) );
+
+	//随机数种子
+	struct timeval tp_time;
+	gettimeofday( &tp_time, NULL );
+	srand( tp_time.tv_usec );
+
 	int main_fd = start_net_service( bind_ip, port );
 	assert( main_fd >= 0 );
 	const char *err_log_path = conf_ini.read_ini_char( "log" );

@@ -22,6 +22,10 @@
 #define WRITE_EVENT EPOLLOUT|EPOLLRDHUP						//写事件
 #define MAX_NORMAL_FD 5										//普通socket连接个数
 
+#define FIRST_FPM_MAIN 2									//主进程
+#define FIRST_FPM_SUB 1										//子进程
+
+
 #define check_epoll_init() if ( -1 == MAIN_POOL_FD ) first_create_poll()
 
 //发送协议包
@@ -52,6 +56,10 @@ extern first_poll_struct_t *CLOSE_FD_LIST;
 
 //存放普通的socket连接(不受first_poll管理)
 extern int normal_socket_list[];
+
+//fpm进程类型
+extern int FIRST_FPM_TYPE;
+
 /**
  * 初始化poll
  */
@@ -128,9 +136,9 @@ void delete_protocol_packet( protocol_packet_t *tmp_pack );
 protocol_packet_t *new_proto_packet( uint32_t data_len );
 
 /**
- * 转发数据包
+ * 获取数据包里的role_id为hash_id
  */
-void first_socket_proxy(  first_poll_struct_t *fd_info, protocol_packet_t *data_pack, zval *tmp_result );
+uint32_t read_proxy_hash_id( protocol_packet_t *data_pack );
 
 /**
  * 写事件

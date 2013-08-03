@@ -1,23 +1,24 @@
 #include "im_proxy.h"
+#include "im_common.h"
 /**
  * 主动转发
  */
-void ImProxy::proxy( protocol_result_t *pack_data )
+void ImProxy::proxy( protocol_result_t *pack_data, uint32_t hash_id )
 {
-	fd_struct_t *fd_info = get_proxy_fd();
+	fd_struct_t *fd_info = get_proxy_fd( hash_id );
 	if ( NULL == fd_info )
 	{
 		return;
 	}
-	MAIN_POLLER.send_data( fd_info, pack_data->str, pack_data->pos );
+	main_poller_send_pack_p( fd_info, pack_data );
 }
 
 /**
  * 被动转发
  */
-void ImProxy::proxy( protocol_packet_t *pack_data )
+void ImProxy::proxy( protocol_packet_t *pack_data, uint32_t hash_id )
 {
-	fd_struct_t *fd_info = get_proxy_fd();
+	fd_struct_t *fd_info = get_proxy_fd( hash_id );
 	if ( NULL == fd_info )
 	{
 		return;
@@ -28,23 +29,27 @@ void ImProxy::proxy( protocol_packet_t *pack_data )
 /**
  * 获取代理fd
  */
-inline fd_struct_t* ImProxy::get_proxy_fd()
+inline fd_struct_t* ImProxy::get_proxy_fd( uint32_t hash_id )
 {
-	if ( 0 == im_proxy_list_.size() )
+	size_t fpm_size = im_proxy_list_.size();
+	if ( 0 == fpm_size )
 	{
 		OUT_ERROR << "No php process join!" << fin;
 		return NULL;
 	}
-	if ( proxy_index_ >= im_proxy_list_.size() )
+	int index = 0;
+	if ( fpm_size > 1 )
 	{
-		proxy_index_ = 0;
+		if ( 0 == hash_id )
+		{
+			index = mt_rand( 0, fpm_size );
+		}
+		else
+		{
+			index = hash_id % fpm_size;
+		}
 	}
-	fd_struct_t *fd_info = im_proxy_list_[ proxy_index_ ];
-	++proxy_index_;
-	#ifdef FIRST_DEBUG
-	OUT_LOG << "Find fd:" << fd_info->fd << fin;
-	#endif
-	return fd_info;
+	return im_proxy_list_[ index ];
 }
 
 /**
@@ -53,7 +58,6 @@ inline fd_struct_t* ImProxy::get_proxy_fd()
 void ImProxy::add( fd_struct_t *fd_info )
 {
 	im_proxy_list_.push_back( fd_info );
-	OUT_LOG << "sizeof list:" << im_proxy_list_.size() << fin;
 }
 
 /**

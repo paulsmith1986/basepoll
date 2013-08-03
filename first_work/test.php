@@ -15,4 +15,9 @@ function test_3 ()
 	$re = first_pack_data( array( array( '101', array( 'error_no' => 10, 'error_arg' => array(), 'error_msg' => 'aaa' ) ), array( '101', array( 'error_no' => 10, 'error_arg' => array(), 'error_msg' => 'aaa' ) ),array( '101', array( 'error_no' => 10, 'error_arg' => array(), 'error_msg' => 'aaa' ) ), array( '101', array( 'error_no' => 10, 'error_arg' => array(), 'error_msg' => 'aaa' ) ), array( '101', array( 'error_no' => 10, 'error_arg' => array(), 'error_msg' => 'aaa' ) ),array( '101', array( 'error_no' => 10, 'error_arg' => array(), 'error_msg' => 'aaa' ) ) ) );
 	var_dump( $re );
 }
-test_3();
+function test_4 ()
+{
+	$re = first_set_fpm_type(2);
+	var_dump( $re );
+}
+test_4();

@@ -4,6 +4,8 @@
 #include "so_encode.h"
 //关闭socket list
 first_poll_struct_t *CLOSE_FD_LIST = NULL;
+//fpm进程类型
+int FIRST_FPM_TYPE = 0;
 
 //存放普通的socket连接(不受first_poll管理)
 int normal_socket_list[ MAX_NORMAL_FD ];
@@ -278,6 +280,18 @@ PHP_FUNCTION ( first_send_data )
 	}
 }
 
+//设置进程类型
+PHP_FUNCTION( first_set_fpm_type )
+{
+	long fpm_type;
+	if ( zend_parse_parameters( ZEND_NUM_ARGS() TSRMLS_CC, "l", &fpm_type ) == FAILURE )
+	{
+		return;
+	}
+	FIRST_FPM_TYPE = fpm_type;
+	RETURN_TRUE;
+}
+
 //等待事件发生
 PHP_FUNCTION ( first_poll )
 {
@@ -507,10 +521,19 @@ PHP_FUNCTION( first_proxy_unpack )
 		array_init( return_value );
 		packet_head_t *pack_head = ( packet_head_t* )proxy_pack->data->bytes;
 		add_assoc_long( return_value, "PROXY_PACK_ID", pack_head->pack_id );
-		add_assoc_long( return_value, "role_id", proxy_pack->role_id );
-		add_assoc_long( return_value, "session_id", proxy_pack->session_id );
-		char *data = (char *)&proxy_pack->data->bytes[ sizeof( packet_head_t ) ];
-		add_assoc_stringl( return_value, "proto_data", data, proxy_pack->data->len - sizeof( packet_head_t ), 1 );
+		add_assoc_long( return_value, "PROXY_ROLE_ID", proxy_pack->role_id );
+		add_assoc_long( return_value, "PROXY_SESSION_ID", proxy_pack->session_id );
+		protocol_packet_t tmp_pack;
+		tmp_pack.pos = sizeof( packet_head_t );
+		tmp_pack.data = proxy_pack->data->bytes;
+		packet_head_t *pack_head = ( packet_head_t* )tmp_pack.data;
+		tmp_pack.max_pos = proxy_pack->data->len;
+		php_unpack_protocol_data( pack_head->pack_id, &tmp_pack, return_value );
+		if ( 0 == tmp_pack.pos )
+		{
+			zval_dtor( return_value );
+			ZVAL_NULL( return_value );
+		}
 	}
 	try_free_result_pack( read_result_pool );
 }
@@ -788,6 +811,13 @@ void read_socket_data( first_poll_struct_t *fd_info, zval *tmp_result )
 					packet_head_t *pack_head = ( packet_head_t* )read_packet->data;
 					add_assoc_long( tmp_result, "pack_id", pack_head->pack_id );
 					add_assoc_stringl( tmp_result, "proto_data", read_packet->data, read_packet->pos, 1 );
+					uint32_t hash_id = 0;
+					//转发请求. 找出role_id 为 hash_id
+					if ( FIRST_FPM_MAIN == FIRST_FPM_TYPE && 60000 == pack_head->pack_id )
+					{
+						hash_id = read_proxy_hash_id( read_packet );
+					}
+					add_assoc_long( tmp_result, "hash_id", hash_id );
 					//如果不是栈内内存
 					if ( read_packet != &stack_read_packet )
 					{
@@ -810,29 +840,14 @@ void read_socket_data( first_poll_struct_t *fd_info, zval *tmp_result )
 }
 
 /**
- * 转发数据包
+ * 获取数据包里的role_id为hash_id
  */
-void first_socket_proxy( first_poll_struct_t *fd_info, protocol_packet_t *data_pack, zval *tmp_result )
+uint32_t read_proxy_hash_id( protocol_packet_t *data_pack )
 {
+	uint32_t hash_id;
 	data_pack->pos = sizeof( packet_head_t );
-	protocol_result_t read_result_pool;
-	read_result_pool.pos = 0;
-	read_result_pool.error_code = 0;
-	char TMP_POOL[ PROTO_SIZE_SO_FPM_PROXY ];
-	read_result_pool.max_pos = sizeof( TMP_POOL );
-	read_result_pool.str = TMP_POOL;
-	proto_so_fpm_proxy_t *proxy_pack = read_so_fpm_proxy( data_pack, &read_result_pool );
-	if ( read_result_pool.error_code )
-	{
-		fd_info->is_return = 0;
-		return;
-	}
-	printf( "session_id:u\n", proxy_pack->session_id );
-	packet_head_t *pack_head = ( packet_head_t* )proxy_pack->data->bytes;
-	add_assoc_long( tmp_result, "pack_id", pack_head->pack_id );
-	add_assoc_long( tmp_result, "role_id", proxy_pack->role_id );
-	add_assoc_long( tmp_result, "session_id", proxy_pack->session_id );
-	add_assoc_stringl( tmp_result, "proto_data", proxy_pack->data->bytes, proxy_pack->data->len, 1 );
+	memcpy( &hash_id, data_pack->data[ data_pack->pos ], sizeof( uint32_t ) );
+	return hash_id;
 }
 
 /**

@@ -22,7 +22,7 @@ fd_struct_t *role_fd_info( int role_id )
 
 /**
  * 判断md5加密是否正确
- */
+
 int chk_md5( char *src_str, char *md5_str )
 {
 	MD5_CTX context;
@@ -47,6 +47,22 @@ int chk_md5( char *src_str, char *md5_str )
 			hexits[ digest[6] & 0x0F ] == md5_str[ 13 ] &&
 			hexits[ digest[7] >> 4 ] == md5_str[ 14 ] &&
 			hexits[ digest[7] & 0x0F ] == md5_str[ 15 ];
+} */
+
+
+/**
+ * 产生范围从x 到 y的随机数
+ */
+int mt_rand( int x, int y )
+{
+	//如果 x 大于 y 交换值
+	if ( x > y )
+	{
+		int z = y;
+		y = x;
+		x = z;
+	}
+	return rand() % ( y - x + 1 ) + x;
 }
 
 /**
