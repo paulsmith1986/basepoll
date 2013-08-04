@@ -81,7 +81,7 @@ void FirstPoller::poll( int interval )
 					tmp_info->ext_data = NULL;
 				}
 				//清除fd_list
-				ActiveFdList::iterator fd_it = fd_list_.find( tmp_info->fd );
+				ActiveFdList::iterator fd_it = fd_list_.find( tmp_info->session_id );
 				if ( fd_it != fd_list_.end() )
 				{
 					fd_list_.erase( fd_it );
@@ -116,6 +116,9 @@ void FirstPoller::new_connection( fd_struct_t *fd_info )
 			return;
 		}
 		fd_struct_t *new_fd = create_fd_struct( connfd, FD_TYPE_SOCKET );
+		#ifdef FIRST_NET_DEBUG
+		NET_OUT_LOG << "New connection, fd:" << connfd << " session_id:" << new_fd->session_id << fin;
+		#endif
 		update_fd_event( new_fd, EPOLL_CTL_ADD, READ_EVENT );
 	}
 }
@@ -128,8 +131,9 @@ fd_struct_t* FirstPoller::create_fd_struct( int fd, fdType fd_type )
 	tmp_info->fd_type = fd_type;
 	tmp_info->fd = fd;
 	tmp_info->socket_type = 0;
+	tmp_info->session_id = session_id_++;
 	set_fd_status( tmp_info, FD_STATE_IDLE );
-	fd_list_[ fd ] = tmp_info;
+	fd_list_[ tmp_info->session_id ] = tmp_info;
 	return tmp_info;
 }
 
@@ -208,9 +212,9 @@ void FirstPoller::send_data( fd_struct_t *fd_info, void *send_re, uint32_t total
 }
 
 //查看一个fd详细信息
-fd_struct_t* FirstPoller::find_fd( int fd )
+fd_struct_t* FirstPoller::find_fd( uint32_t session_id )
 {
-	ActiveFdList::iterator fd_it = fd_list_.find( fd );
+	ActiveFdList::iterator fd_it = fd_list_.find( session_id );
 	if ( fd_it == fd_list_.end() )
 	{
 		return NULL;

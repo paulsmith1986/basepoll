@@ -526,7 +526,7 @@ PHP_FUNCTION( first_proxy_unpack )
 		protocol_packet_t tmp_pack;
 		tmp_pack.pos = sizeof( packet_head_t );
 		tmp_pack.data = proxy_pack->data->bytes;
-		packet_head_t *pack_head = ( packet_head_t* )tmp_pack.data;
+		pack_head = ( packet_head_t* )tmp_pack.data;
 		tmp_pack.max_pos = proxy_pack->data->len;
 		php_unpack_protocol_data( pack_head->pack_id, &tmp_pack, return_value );
 		if ( 0 == tmp_pack.pos )
@@ -845,8 +845,7 @@ void read_socket_data( first_poll_struct_t *fd_info, zval *tmp_result )
 uint32_t read_proxy_hash_id( protocol_packet_t *data_pack )
 {
 	uint32_t hash_id;
-	data_pack->pos = sizeof( packet_head_t );
-	memcpy( &hash_id, data_pack->data[ data_pack->pos ], sizeof( uint32_t ) );
+	memcpy( &hash_id, &data_pack->data[ sizeof( packet_head_t ) ], sizeof( uint32_t ) );
 	return hash_id;
 }
 

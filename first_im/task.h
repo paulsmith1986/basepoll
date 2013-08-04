@@ -28,6 +28,9 @@ extern StructPool<role_struct_t*> ROLE_STRUCT_POOL;
 //发送协议包指针
 #define send_protocol_p( fd_info, pack ) MAIN_POLLER.send_data( fd_info, pack->str, pack->pos )
 
+//查找一个fd
+#define find_fd( session_id ) MAIN_POLLER.find_fd( session_id )
+
 /**
  * 查找一个玩家
  */

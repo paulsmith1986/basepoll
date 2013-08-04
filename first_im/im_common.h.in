@@ -44,6 +44,8 @@ extern FirstPoller MAIN_POLLER;
 		free( pack->str );													\
 	}
 
+#define close_fd_info( fd_info ) MAIN_POLLER.close_fd( fd_info )
+
 //场景cell描述
 struct scene_apc_pack{
 	uint16_t				cell_num;						//格子数量

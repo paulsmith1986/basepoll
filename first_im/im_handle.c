@@ -37,6 +37,9 @@ void ImHandle::on_socket_fd( fd_struct_t *fd_info, protocol_packet_t *read_packe
 		proto_so_fpm_proxy_t proxy_pack;
 		proxy_pack.data = &request_pack;
 		proxy_pack.role_id = role_id;
+		#ifdef FIRST_DEBUG
+		OUT_LOG << "session id:" << fd_info->session_id << "!" << fin;
+		#endif
 		proxy_pack.session_id = fd_info->session_id;
 		encode_so_fpm_proxy( proxy_new_pack, &proxy_pack );
 		IM_PROXY_OBJECT.proxy( &proxy_new_pack, role_id );

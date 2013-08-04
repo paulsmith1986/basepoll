@@ -24,6 +24,7 @@ class FirstPoller
 		fd_pool_( StructPool<fd_struct_t*>( fd_pool_size, sizeof( fd_struct_t ) ) ),
 		events_( max_event ),
 		fd_pool_size_( fd_pool_size ),
+		session_id_( 1 ),
 		poll_handler_( poll_handler )
 		{
 			if ( epoll_fd_ < 0 )
@@ -43,7 +44,7 @@ class FirstPoller
 		//信号fd
 		fd_struct_t* create_signal_fd( sigset_t &mask );
 		//查看某个fd的详细信息
-		fd_struct_t* find_fd( int fd );
+		fd_struct_t* find_fd( uint32_t session_id );
 		//更新fd的监听事件
 		void update_fd_event( fd_struct_t *fd_info, int op, int new_event );
 		//发送消息
@@ -74,6 +75,7 @@ class FirstPoller
 		EventList events_;
 		//连接池大小
 		const int fd_pool_size_;
+		uint32_t session_id_;
 		//回调处理类
 		PollHandler *poll_handler_;
 };
