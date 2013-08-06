@@ -521,19 +521,9 @@ PHP_FUNCTION( first_proxy_unpack )
 		array_init( return_value );
 		packet_head_t *pack_head = ( packet_head_t* )proxy_pack->data->bytes;
 		add_assoc_long( return_value, "PROXY_PACK_ID", pack_head->pack_id );
-		add_assoc_long( return_value, "PROXY_ROLE_ID", proxy_pack->role_id );
-		add_assoc_long( return_value, "PROXY_SESSION_ID", proxy_pack->session_id );
-		protocol_packet_t tmp_pack;
-		tmp_pack.pos = sizeof( packet_head_t );
-		tmp_pack.data = proxy_pack->data->bytes;
-		pack_head = ( packet_head_t* )tmp_pack.data;
-		tmp_pack.max_pos = proxy_pack->data->len;
-		php_unpack_protocol_data( pack_head->pack_id, &tmp_pack, return_value );
-		if ( 0 == tmp_pack.pos )
-		{
-			zval_dtor( return_value );
-			ZVAL_NULL( return_value );
-		}
+		add_assoc_long( return_value, "role_id", proxy_pack->role_id );
+		add_assoc_long( return_value, "session_id", proxy_pack->session_id );
+		add_assoc_stringl( return_value, "proto_data", proxy_pack->data->bytes, proxy_pack->data->len, 1 );
 	}
 	try_free_result_pack( read_result_pool );
 }
