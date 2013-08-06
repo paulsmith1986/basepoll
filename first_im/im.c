@@ -37,7 +37,7 @@ int main( int argc, char *argv[] )
 				show_help();
 			break;
 			case 'v':
-				cout << "Demo 1.0" << endl;
+				cout << "First im 1.0" << endl;
 				return 0;
 			break;
 			default:

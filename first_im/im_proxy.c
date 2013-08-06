@@ -32,6 +32,7 @@ void ImProxy::proxy( protocol_packet_t *pack_data, uint32_t hash_id )
 inline fd_struct_t* ImProxy::get_proxy_fd( uint32_t hash_id )
 {
 	size_t fpm_size = im_proxy_list_.size();
+	OUT_ERROR << "fpm_size:" << fpm_size << fin;
 	if ( 0 == fpm_size )
 	{
 		OUT_ERROR << "No php process join!" << fin;

@@ -1,4 +1,15 @@
 #include "task.h"
+/**
+ * pack_id: 20006 服务器给单个session推数据
+ */
+void request_so_push_session_data( fd_struct_t *fd_info, proto_so_push_session_data_t *req_pack )
+{
+	fd_struct_t *session_fd = find_fd( req_pack->session_id );
+	if ( NULL != session_fd )
+	{
+		MAIN_POLLER.send_data( session_fd, req_pack->data->bytes, req_pack->data->len );
+	}
+}
 
 /**
  * pack_id: 20007 服务器给单个用户推数据
@@ -128,9 +139,9 @@ void request_so_role_enter( fd_struct_t *fd_info, proto_so_role_enter_t *req_pac
 	encode_im_join_server_re( send_pack, &join_out_data );
 	main_poller_send_pack( join_role_fd_info, send_pack );
 
-	proto_main_init_t init_pack;
+	proto_game_init_t init_pack;
 	init_pack.role_id = req_pack->role_id;
-	encode_main_init( result_pack, &init_pack );
+	encode_game_init( result_pack, &init_pack );
 	IM_PROXY_OBJECT.proxy( &result_pack, 0 );
 }
 
@@ -138,14 +149,6 @@ void request_so_role_enter( fd_struct_t *fd_info, proto_so_role_enter_t *req_pac
  * pack_id: 21002 加入聊天频道
  */
 void request_role_join_channel( fd_struct_t *fd_info, proto_role_join_channel_t *req_pack )
-{
-
-}
-
-/**
- * pack_id: 21003 加入场景
- */
-void request_role_join_scene( fd_struct_t *fd_info, proto_role_join_scene_t *req_pack )
 {
 
 }
