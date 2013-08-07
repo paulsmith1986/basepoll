@@ -5,6 +5,7 @@
 void request_so_push_session_data( fd_struct_t *fd_info, proto_so_push_session_data_t *req_pack )
 {
 	fd_struct_t *session_fd = find_fd( req_pack->session_id );
+	printf( "session_id:%u\n", req_pack->session_id );
 	if ( NULL != session_fd )
 	{
 		MAIN_POLLER.send_data( session_fd, req_pack->data->bytes, req_pack->data->len );
@@ -17,6 +18,7 @@ void request_so_push_session_data( fd_struct_t *fd_info, proto_so_push_session_d
 void request_so_push_role_data( fd_struct_t *fd_info, proto_so_push_role_data_t *req_pack )
 {
 	fd_struct_t *role_fd = role_fd_info( req_pack->role_id );
+	printf( "role_id:%u, len:%d\n", req_pack->role_id, req_pack->data->len );
 	if ( role_fd )
 	{
 		MAIN_POLLER.send_data( role_fd, req_pack->data->bytes, req_pack->data->len );
@@ -121,7 +123,10 @@ void request_so_role_enter( fd_struct_t *fd_info, proto_so_role_enter_t *req_pac
 				delete_role_struct( tmp_info );
 				check_role_fd_info->ext_data = NULL;
 			}
-			close_fd_info( check_role_fd_info );
+			if ( check_role_fd_info->fd != join_role_fd_info->fd )
+			{
+				close_fd_info( check_role_fd_info );
+			}
 		}
 	}
 	role_struct_t *new_role = new_role_struct();
@@ -133,7 +138,7 @@ void request_so_role_enter( fd_struct_t *fd_info, proto_so_role_enter_t *req_pac
 	ROLE_LIST[ req_pack->role_id ] = join_role_fd_info;
 	//PHP_IM_SYNC_OBJ.role_login( req_pack->role_id );
 	#ifdef FIRST_DEBUG
-	OUT_LOG << "加入用户 role_id:" << req_pack->role_id << " role_name:" << req_pack->role_name << fin;
+	OUT_LOG << "加入用户 role_id:" << req_pack->role_id << " role_name:" << req_pack->role_name << " fd:" << join_role_fd_info->fd << fin;
 	#endif
 	join_role_fd_info->ext_data = new_role;
 	encode_im_join_server_re( send_pack, &join_out_data );

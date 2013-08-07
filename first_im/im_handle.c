@@ -1,4 +1,5 @@
 #include "im_handle.h"
+#include "task.h"
 void ImHandle::on_socket_fd( fd_struct_t *fd_info, protocol_packet_t *read_packet )
 {
 	packet_head_t *pack_head = ( packet_head_t* )read_packet->data;
@@ -75,7 +76,16 @@ void ImHandle::on_socket_fd( fd_struct_t *fd_info, protocol_packet_t *read_packe
 //连接关闭回调
 void ImHandle::on_close( fd_struct_t *fd_info )
 {
-	IM_PROXY_OBJECT.check_is_php_fd( fd_info );
+	if ( fd_info->socket_type > 0 )
+	{
+		IM_PROXY_OBJECT.check_is_php_fd( fd_info );
+	}
+	if ( NULL != fd_info->ext_data )
+	{
+		role_struct_t *tmp_info = static_cast<role_struct_t*>( fd_info->ext_data );
+		delete_role_struct( tmp_info );
+		fd_info->ext_data = NULL;
+	}
 }
 
 //信号捕捉到

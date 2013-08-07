@@ -9,10 +9,12 @@ function test_1 ()
 	);
 	$send = proto_pack_game_login( $data, false );
 	$socket = socket_create( AF_INET, SOCK_STREAM, SOL_TCP );
-	socket_connect( $socket, '192.168.2.10', 9999 );
+	socket_connect( $socket, '192.168.128.129', 9999 );
 	$re = socket_write( $socket, $send, strlen( $send ) );
-	while ( true )
+	$rank = 0;
+	while ( $rank < 10 )
 	{
+		++$rank;
 		$read = socket_read( $socket, 65536 );
 		var_dump( strlen( $read ) );
 	}
