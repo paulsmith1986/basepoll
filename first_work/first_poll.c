@@ -670,7 +670,6 @@ void first_on_socket_write( first_poll_struct_t *fd_info )
 void first_close_fd( first_poll_struct_t *fd_info )
 {
 	first_update_event( fd_info, EPOLL_CTL_DEL, READ_EVENT|WRITE_EVENT );
-	close( fd_info->fd );
 	if ( NULL == CLOSE_FD_LIST )
 	{
 		CLOSE_FD_LIST = fd_info;
@@ -847,6 +846,7 @@ void check_fd_close_list()
 	first_poll_struct_t *tmp_fd = CLOSE_FD_LIST;
 	while ( NULL != tmp_fd )
 	{
+		close( tmp_fd->fd );
 		//未发送的消息
 		if ( 0 != tmp_fd->un_send_len && NULL != tmp_fd->un_send )
 		{
